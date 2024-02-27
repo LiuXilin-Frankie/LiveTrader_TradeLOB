@@ -30,3 +30,6 @@ To apply an event-driven approach to a backtesting system it is necessary to def
 
 
 
+
+
+

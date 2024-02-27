@@ -113,44 +113,85 @@ class HistoricCSVDataHandler(DataHandler):
         
         return symbol_exchange_list_temp
 
-    def _open_convert_csv_files(self):
+    def _process_duplicated_time(self, df):
         """
-        Opens the CSV files from the data directory, converting them into pandas DataFrames within a symbol dictionary.
+        因为 Sys 把 timestep 作为数据的 key 推送， 必须删除其中重复的
+        我们仅保留最后一次出现的样本
+        """
+        df = df.drop_duplicates(subset=['time'],keep='last').reset_index(drop=True)
+        return df
+
+    def _open_convert_csv_files_trade(self):
+        """
+        用于读取 trade csv数据
         """
         ## trade
         comb_index = None
         for s in self.symbol_exchange_list:
-            # Load the CSV file with no header information, indexed on date
-            self.symbol_data[s] = pd.read_csv(
+            # 读取csv数据，csv的存储格式采用默认的方式
+            self.symbol_exchange_trade_data[s] = pd.read_csv(
                 os.path.join(self.csv_dir, '%s_trade.csv' % s)
             )
-            self.symbol_data[s].sort_index(inplace=True)
-            self.symbol_data[s] = self.symbol_data[s][['time','price','qty','is_buyer_maker']] # 约束有哪些列
+            self.symbol_exchange_trade_data[s] = self.symbol_exchange_trade_data[s][['time','price','qty','is_buyer_maker']] # 约束有哪些列
+            self.symbol_exchange_trade_data[s] = self._process_duplicated_time(self.symbol_exchange_trade_data[s])  # 删除时间副本
+            self.symbol_exchange_trade_data[s] = self.symbol_exchange_trade_data[s].set_index(keys='time')
+            self.symbol_exchange_trade_data[s].sort_index(inplace=True)
 
-            # Combine the index to pad forward values
+            # 将index(time)值合并，级把所有的time融合，保持数据的一致性。
             if comb_index is None:
-                comb_index = self.symbol_data[s].index
+                comb_index = self.symbol_exchange_trade_data[s].index
             else:
-                comb_index.union(self.symbol_data[s].index)
+                comb_index.union(self.symbol_exchange_trade_data[s].index)
 
             # Set the latest symbol_data to None
-            self.latest_symbol_data[s] = []
+            self.latest_symbol_exchange_trade_data[s] = []
 
         for s in self.symbol_exchange_list:
-            self.symbol_data[s] = self.symbol_data[s].reindex(
+            self.symbol_exchange_trade_data[s] = self.symbol_exchange_trade_data[s].reindex(
                 index=comb_index, method='pad'
             )
-            self.symbol_data[s]["returns"] = self.symbol_data[s]["adj_close"].pct_change().fillna(0)
-            self.symbol_data[s]["price_change"] = (self.symbol_data[s]["price"].shift(1) - self.symbol_data[s]["price"]).fillna(0)
-            self.symbol_data[s] = self.symbol_data[s].iterrows()
+            self.symbol_exchange_trade_data[s]["returns"] = self.symbol_exchange_trade_data[s]["adj_close"].pct_change().fillna(0)
+            self.symbol_exchange_trade_data[s]["price_change"] = (self.symbol_exchange_trade_data[s]["price"].shift(1) - self.symbol_exchange_trade_data[s]["price"]).fillna(0)
+            self.symbol_exchange_trade_data[s] = self.symbol_exchange_trade_data[s].iterrows()
 
         # Reindex the dataframes
         for s in self.symbol_list:
-            self.symbol_data[s] = self.symbol_data[s].reindex(index=comb_index, method='pad').iterrows()
+            self.symbol_exchange_trade_data[s] = self.symbol_exchange_trade_data[s].reindex(index=comb_index, method='pad').iterrows()
 
+    def _get_new_trade(self, symbol_exchange):
+        """
+        return the latest trade data for the "symbol_exchange"
+        """
+        for b in self.symbol_exchange_trade_data[symbol_exchange]:
+            yield tuple([symbol_exchange, b[0], 
+                        b[1][0], b[1][1], b[1][2], b[1][3], b[1][4]])
 
-
-
+    def get_latest_trades(self, symbol_exchange, N=1):
+        """
+        Returns the last N bars from the latest_symbol list,
+        or N-k if less available.
+        """
+        try:
+            trades_list = self.latest_symbol_exchange_trade_data[symbol_exchange]
+        except KeyError:
+            print("That symbol_exchange is not available in the historical data set.")
+        else:
+            return trades_list[-N:]
+        
+    def update_trades(self):
+        """
+        Pushes the latest bar to the latest_symbol_data structure
+        for all symbols in the symbol list.
+        """
+        for s in self.symbol_exchange:
+            try:
+                trade = self._get_new_trade(s).next()
+            except StopIteration:
+                self.continue_backtest = False
+            else:
+                if trade is not None:
+                    self.latest_symbol_exchange_trade_data[s].append(trade)
+        self.events.put(MarketEvent())
 
 
 

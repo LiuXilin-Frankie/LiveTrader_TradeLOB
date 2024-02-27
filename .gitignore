@@ -5,6 +5,7 @@ data/
 
 try/
 .idea/
+*.csv
 
 
 # Byte-compiled / optimized / DLL files
