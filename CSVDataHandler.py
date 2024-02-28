@@ -16,6 +16,7 @@ import pandas as pd
 from abc import ABCMeta, abstractmethod
 
 from event import MarketEvent
+from object import DataHandler
 
 
 class DataHandlerError(Exception):
@@ -23,35 +24,6 @@ class DataHandlerError(Exception):
         self.errorinfo = errorinfo
     def __str__(self):
         print("DataHandlerError:",self.errorinfo)
-
-
-class DataHandler(object):
-    """
-    DataHandler is an abstract base class providing an interface for all subsequent (inherited) data handlers (both live and historic).
-
-    The goal of a (derived) DataHandler object is to output a generated set of tick(trades) for each symbol(in each exchange) requested. 
-
-    This will replicate how a live strategy would function as current market data would be sent "down the pipe". 
-    Thus a historic and live system will be treated identically by the rest of the backtesting suite.
-    """
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def get_latest_ticks(self, symbol, exchange, N=1):
-        """
-        Returns the last N ticks from the latest_symbol(exchange) list,
-        or fewer if less ticks are available.
-        """
-        raise NotImplementedError("Should implement get_latest_ticks()")
-
-    @abstractmethod
-    def update_ticks(self):
-        """
-        Pushes the latest ticks to the latest symbol(exchange) structure
-        for all symbols in the symbol(exchange) list.
-        """
-        raise NotImplementedError("Should implement update_ticks()")
 
 
 class HistoricCSVDataHandler(DataHandler):

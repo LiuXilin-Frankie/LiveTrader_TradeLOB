@@ -17,21 +17,7 @@ import Queue
 from abc import ABCMeta, abstractmethod
 
 from event import SignalEvent
-
-class Strategy(object):
-    """
-    Strategy 是一个抽象基类，为所有后续（继承的）策略处理对象提供接口。
-    通过计算trade中产生的交易信号, 对特定的标的产生 SignalEvent()
-    """
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def calculate_signals(self):
-        """
-        Provides the mechanisms to calculate the list of signals.
-        """
-        raise NotImplementedError("Should implement calculate_signals()")
+from object import Strategy
     
 
 class BuyAndHoldStrategy(Strategy):

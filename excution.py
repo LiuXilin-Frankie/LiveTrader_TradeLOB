@@ -13,26 +13,7 @@ import Queue
 from abc import ABCMeta, abstractmethod
 
 from event import FillEvent, OrderEvent
-
-
-class ExecutionHandler(object):
-    """
-    模拟交易所的撮合引擎
-    抽象类，与之前类似
-    """
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def execute_order(self, event):
-        """
-        Takes an Order event and executes it, producing
-        a Fill event that gets placed onto the Events queue.
-
-        Parameters:
-        event - Contains an Event object with order information.
-        """
-        raise NotImplementedError("Should implement execute_order()")
+from object import ExecutionHandler
 
 
 class SimulatedExecutionHandler(ExecutionHandler):
