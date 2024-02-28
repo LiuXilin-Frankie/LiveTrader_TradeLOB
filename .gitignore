@@ -5,7 +5,10 @@ data/
 
 try/
 .idea/
+# 忽略过大的数据
 *.csv
+# 忽略与broker交互的代码
+ib*.py
 
 
 # Byte-compiled / optimized / DLL files

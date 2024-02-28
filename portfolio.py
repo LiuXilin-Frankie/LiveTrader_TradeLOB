@@ -16,7 +16,7 @@ from abc import ABCMeta, abstractmethod
 from math import floor
 
 from event import FillEvent, OrderEvent
-
+from performance import *
 
 class Portfolio(object):
     """
@@ -216,33 +216,39 @@ class NaivePortfolio(Portfolio):
 
     def update_signal(self, event):
         """
-        Acts on a SignalEvent to generate new orders 
-        based on the portfolio logic.
+        Acts on a SignalEvent to generate new orders based on the portfolio logic.
         """
         if event.type == 'SIGNAL':
             order_event = self.generate_naive_order(event)
             self.events.put(order_event)
 
+    def create_equity_curve_dataframe(self):
+        """
+        生成净值曲线
+        """
+        curve = pd.DataFrame(self.all_holdings)
+        curve.set_index('datetime', inplace=True)
+        curve['returns'] = curve['total'].pct_change()
+        curve['equity_curve'] = (1.0+curve['returns']).cumprod()
+        self.equity_curve = curve
 
+    def output_summary_stats(self):
+        """
+        一个计算策略表现的简单分析器
+        需要提前定义一些函数并引用
+        这里更多是样例的示范
+        Creates a list of summary statistics for the portfolio such
+        as Sharpe Ratio and drawdown information.
+        """
+        total_return = self.equity_curve['equity_curve'][-1]
+        returns = self.equity_curve['returns']
+        pnl = self.equity_curve['equity_curve']
 
+        sharpe_ratio = create_sharpe_ratio(returns)
+        max_dd, dd_duration = create_drawdowns(pnl)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        stats = [("Total Return", "%0.2f%%" % ((total_return - 1.0) * 100.0)),
+                 ("Sharpe Ratio", "%0.2f" % sharpe_ratio),
+                 ("Max Drawdown", "%0.2f%%" % (max_dd * 100.0)),
+                 ("Drawdown Duration", "%d" % dd_duration)]
+        return stats
