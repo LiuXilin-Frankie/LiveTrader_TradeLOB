@@ -9,6 +9,7 @@ try/
 *.csv
 # 忽略与broker交互的代码
 ib*.py
+*.zip
 
 
 # Byte-compiled / optimized / DLL files
