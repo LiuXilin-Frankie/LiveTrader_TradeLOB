@@ -29,7 +29,7 @@ class CSVDataHandler(DataHandler):
             else:
                 self.__cursor += 1
             self.event_queue.put(MarketEvent())   # 生成 MareketEvent
-            print('>>>>>>>>>>>>>>>>>>>>> putting MarketEvent <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+            print('\n>>>>>>>>>>>>>>>>>>>>> putting MarketEvent <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
             time.sleep(self.replay_speed)
 
     def run(self):
