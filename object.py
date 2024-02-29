@@ -7,6 +7,12 @@
 from abc import ABCMeta, abstractmethod
 
 
+class DataHandlerError(Exception):
+    def __init__(self,errorinfo):
+        self.errorinfo = errorinfo
+    def __str__(self):
+        print("DataHandlerError:",self.errorinfo)
+
 class DataHandler(object):
     """
     DataHandler is an abstract base class providing an interface for all subsequent (inherited) data handlers (both live and historic).

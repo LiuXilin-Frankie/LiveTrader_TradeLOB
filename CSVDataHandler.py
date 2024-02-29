@@ -16,14 +16,7 @@ import pandas as pd
 from abc import ABCMeta, abstractmethod
 
 from event import MarketEvent
-from object import DataHandler
-
-
-class DataHandlerError(Exception):
-    def __init__(self,errorinfo):
-        self.errorinfo = errorinfo
-    def __str__(self):
-        print("DataHandlerError:",self.errorinfo)
+from object import DataHandler, DataHandlerError
 
 
 class HistoricCSVDataHandler(DataHandler):

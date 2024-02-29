@@ -29,7 +29,10 @@ To apply an event-driven approach to a backtesting system it is necessary to def
 + The Loop - All of these components are wrapped in an event-loop that correctly handles all Event types, routing them to the appropriate component.
 
 
-
+### 数据特性：
+1. 为了满足跨交易所交易的策略需求，品类命名被写为 "symbol_exchange" 的形式，比如说 "btc_usdt_binance", 所有需要考虑的品类名被存储在 symbol_exchange_list 中
+2. 推送的顺序规则为: 1.品类名按照字母大小顺序排序, 2. trade 优先于 tick(LOB) 
+3. 同一个时间点 timestamp 可能有多种数据，可能有多次 trade 信息。
 
 
 
