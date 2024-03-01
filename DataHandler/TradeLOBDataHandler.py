@@ -20,9 +20,11 @@ import pandas as pd
 import queue
 from typing import List, Tuple, Dict
 from abc import ABCMeta, abstractmethod
+import sys
+sys.path.append("...")
 
-from ..event import MarketEvent
-from ..object import DataHandler, DataHandlerError
+from event import MarketEvent
+from object import DataHandler, DataHandlerError
 from DataHandler.MarketDataStructure import Orderbook, Trade
 
 
@@ -146,6 +148,7 @@ class HistoricTradeLOBDataHandler(DataHandler):
             self.latest_symbol_exchange_trade_data_time[s] = []
             self.registered_symbol_exchange_LOB_data[s] = {}
             self.latest_symbol_exchange_LOB_data_time[s] = []
+            print('complete init of the data:',s)
 
             # 集合时间的index
             if comb_time_index is None:
@@ -173,9 +176,10 @@ class HistoricTradeLOBDataHandler(DataHandler):
         Pushes the latest trade/LOB info in that time
         """
         try: # 获取现在迭代的时间戳
-            self.backtest_now = self.comb_time_index_iter.next()
+            self.backtest_now = self.comb_time_index_iter.__next__()
             print('\n===== processing market event in ',self.backtest_now,' =====')
             self._get_new_data()
             self.events.put(MarketEvent())
+            print('get new market events and push to queue')
         except StopIteration:
             self.continue_backtest = False

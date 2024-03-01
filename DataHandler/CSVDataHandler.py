@@ -12,11 +12,13 @@ refer to https://www.quantstart.com/articles/Event-Driven-Backtesting-with-Pytho
 import datetime
 import os, os.path
 import pandas as pd
+import sys
+sys.path.append("...")
 
 from abc import ABCMeta, abstractmethod
 
-from ..event import MarketEvent
-from ..object import DataHandler, DataHandlerError
+from event import MarketEvent
+from object import DataHandler, DataHandlerError
 
 
 class HistoricCSVDataHandler(DataHandler):

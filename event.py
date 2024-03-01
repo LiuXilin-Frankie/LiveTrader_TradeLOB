@@ -23,7 +23,8 @@ class Event(object):
     """
     Event is base class providing an interface for all events, which will trigger further events.
     """
-    pass
+    def __repr__(self):
+        return self.__dict__.__repr__()
 
 
 class MarketEvent(Event):

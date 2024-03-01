@@ -12,20 +12,22 @@ refer to https://www.quantstart.com/articles/Event-Driven-Backtesting-with-Pytho
 import datetime
 import numpy as np
 import pandas as pd
-import Queue
+import queue
+import sys
+sys.path.append("...")
 
 from abc import ABCMeta, abstractmethod
 
-from ..event import SignalEvent
-from ..object import Strategy
-    
+from event import SignalEvent
+from object import Strategy
+
 
 class BuyAndHoldStrategy(Strategy):
     """
     简单的策略进行测试
     """
 
-    def __init__(self, trades, events):
+    def __init__(self, events, datahandler):
         """
         Initialises the buy and hold strategy.
 
@@ -33,10 +35,9 @@ class BuyAndHoldStrategy(Strategy):
         trades - The DataHandler object that provides trade information
         events - The Event Queue object.
         """
-        self.trades = trades
-        self.symbol_exchange_list = self.trades.symbol_exchange_list
+        self.datahandler = datahandler
+        self.symbol_exchange_list = self.datahandler.symbol_exchange_list
         self.events = events
-
         # Once buy & hold signal is given, these are set to True
         self.bought = self._calculate_initial_bought()
 
@@ -56,12 +57,9 @@ class BuyAndHoldStrategy(Strategy):
         """
         # 这里全部用来检测数据冗余
         if event.type == 'MARKET':
-            for s in self.symbol_list:
-                trades = self.trades.get_latest_trades(s, N=1)
-                if trades is not None and trades != []:
-                    if self.bought[s] == False:
-                        # 开始进行策略判断
-                        # SignalEvent is (Symbol, Datetime, Type = LONG, SHORT or EXIT)
-                        signal = SignalEvent(trades[0][0], trades[0][1], 'LONG')
+            for s in self.symbol_exchange_list:
+                if self.bought[s] == False:
+                    if self.datahandler.backtest_now in self.datahandler.latest_symbol_exchange_LOB_data_time[s]:
+                        signal = SignalEvent(s, self.datahandler.backtest_now, "BUY")
                         self.events.put(signal)
                         self.bought[s] = True
