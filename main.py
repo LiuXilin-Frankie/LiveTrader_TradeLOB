@@ -6,8 +6,8 @@
 import queue
 import time
 
-from CSVDataHandler import CSVDataHandler
-from strategy import RandomStrategy
+from DataHandler.CSVDataHandler import CSVDataHandler
+from Strategy.strategy import RandomStrategy
 from portfolio import NaivePortfolio
 from BarBacktestExecutor import BarBacktestExector
 
@@ -43,5 +43,33 @@ while True:
 
         elif event.type == 'FILL':
             portfolio.on_fill_event(event)    # 根据成交回报更新持仓信息
+
+while True:
+    # Update the bars (specific backtest code, as opposed to live trading)
+    if data_handler.continue_backtest == True:
+        data_handler.update_bars()
+    else:
+        break
+    
+    # Handle the events
+    while True:
+        try:
+            event = event_queue.get(False)
+        except queue.Empty:
+            break
+        else:
+            if event is not None:
+                if event.type == 'MARKET':
+                    strategy.calculate_signals(event)
+                    portfolio.update_timeindex(event)
+
+                elif event.type == 'SIGNAL':
+                    portfolio.update_signal(event)
+
+                elif event.type == 'ORDER':
+                    executor.execute_order(event)
+
+                elif event.type == 'FILL':
+                    portfolio.update_fill(event)
 
 

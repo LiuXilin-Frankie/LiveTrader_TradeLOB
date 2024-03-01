@@ -21,9 +21,9 @@ import queue
 from typing import List, Tuple, Dict
 from abc import ABCMeta, abstractmethod
 
-from event import MarketEvent
-from object import DataHandler, DataHandlerError
-from MarketDataStructure import Orderbook, Trade
+from ..event import MarketEvent
+from ..object import DataHandler, DataHandlerError
+from DataHandler.MarketDataStructure import Orderbook, Trade
 
 
 class HistoricTradeLOBDataHandler(DataHandler):
@@ -56,13 +56,13 @@ class HistoricTradeLOBDataHandler(DataHandler):
         print('backtest on: ', self.symbol_exchange_list)
 
         # trade 数据
-        self.symbol_exchange_trade_data = {}
-        self.registered_symbol_exchange_trade_data = {}
-        self.latest_symbol_exchange_trade_data = {}
+        self.symbol_exchange_trade_data = {}                # 从csv读取的表单
+        self.registered_symbol_exchange_trade_data = {}     # 最新的以及历史的数据
+        self.latest_symbol_exchange_trade_data_time = {}    # 更新到的时间表
         # LOB 数据 (最高频的LOB 仅保存bid1&ask1)
-        self.symbol_exchange_LOB_data = {}
-        self.registered_symbol_exchange_LOB_data = {}
-        self.latest_symbol_exchange_LOB_data = {}
+        self.symbol_exchange_LOB_data = {}                  # 从csv读取的表单
+        self.registered_symbol_exchange_LOB_data = {}       # 最新的以及历史的数据
+        self.latest_symbol_exchange_LOB_data_time = {}      # 更新到的时间表
         # 时间相关的指标
         self.comb_time_index_iter = None
         self.backtest_now = None
@@ -143,9 +143,9 @@ class HistoricTradeLOBDataHandler(DataHandler):
 
             # 初始化 latest 和 registered
             self.registered_symbol_exchange_trade_data[s] = {}
-            self.latest_symbol_exchange_trade_data[s] = {}
+            self.latest_symbol_exchange_trade_data_time[s] = []
             self.registered_symbol_exchange_LOB_data[s] = {}
-            self.latest_symbol_exchange_LOB_data[s] = {}
+            self.latest_symbol_exchange_LOB_data_time[s] = []
 
             # 集合时间的index
             if comb_time_index is None:
@@ -156,3 +156,26 @@ class HistoricTradeLOBDataHandler(DataHandler):
         comb_time_index = list(set(comb_time_index))
         comb_time_index.sort()
         self.comb_time_index_iter = iter(comb_time_index)
+
+    def _get_new_data(self):
+        for s in self.symbol_exchange_list:
+            try:
+                self.registered_symbol_exchange_trade_data[s][self.backtest_now] = self.symbol_exchange_trade_data[s][self.backtest_now]
+                self.latest_symbol_exchange_trade_data_time[s].append(self.backtest_now)
+            except: pass
+            try:
+                self.registered_symbol_exchange_LOB_data[s][self.backtest_now] = self.symbol_exchange_LOB_data[s][self.backtest_now]
+                self.latest_symbol_exchange_LOB_data_time[s].append(self.backtest_now)
+            except: pass
+
+    def update_TradeLOB(self):
+        """
+        Pushes the latest trade/LOB info in that time
+        """
+        try: # 获取现在迭代的时间戳
+            self.backtest_now = self.comb_time_index_iter.next()
+            print('\n===== processing market event in ',self.backtest_now,' =====')
+            self._get_new_data()
+            self.events.put(MarketEvent())
+        except StopIteration:
+            self.continue_backtest = False

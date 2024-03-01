@@ -16,8 +16,8 @@ import Queue
 
 from abc import ABCMeta, abstractmethod
 
-from event import SignalEvent
-from object import Strategy
+from ..event import SignalEvent
+from ..object import Strategy
     
 
 class BuyAndHoldStrategy(Strategy):
@@ -34,7 +34,7 @@ class BuyAndHoldStrategy(Strategy):
         events - The Event Queue object.
         """
         self.trades = trades
-        self.symbol_exchange_list = self.bars.symbol_exchange_list
+        self.symbol_exchange_list = self.trades.symbol_exchange_list
         self.events = events
 
         # Once buy & hold signal is given, these are set to True
