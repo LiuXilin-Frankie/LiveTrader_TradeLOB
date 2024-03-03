@@ -1,5 +1,6 @@
 import queue
 import time
+import os
 
 from DataHandler.TradeLOBDataHandler import HistoricTradeLOBDataHandler
 from Strategy.strategy import *
@@ -7,7 +8,7 @@ from Strategy.strategy import *
 
 event_queue = queue.Queue()
 data_handler = HistoricTradeLOBDataHandler(event_queue, 
-                                           symbol_list=['btc_usdt','btc_usdt'],
+                                           symbol_list=['xrp_usdt','xrp_usdt'],
                                            exchange_list=['binance','okex'], 
                                            file_dir = 'data_sample/', 
                                            is_csv=False)
@@ -41,6 +42,7 @@ while True:
                 elif event.type == 'SIGNAL':
                     #portfolio.update_signal(event)
                     print('get signal event', event)
+                    #sys.exit()
 
                 # elif event.type == 'ORDER':
                 #     executor.execute_order(event)
