@@ -60,6 +60,7 @@ class LogPlotPortfolio(Portfolio):
 
         self.all_holdings = dict( (k,v) for k, v in [(s, {}) for s in self.symbol_exchange_list] )
         self.all_holdings['net_value'] = {}  # 记录净值曲线随着时间的变动
+        self.all_holdings['cash'] = {self.start_time:self.initial_capital,}
         # 我们可以在 current_holdings 中加入更多的计算
         # 这些东西同样也可以加入到 all_holdings 中
         # 这里暂时设置为 None
@@ -87,75 +88,25 @@ class LogPlotPortfolio(Portfolio):
         根据推送过来的订单成交信息更新 positions 和 holdings
         只更新 成交币对的 positions 和 holdings
         """
-        
-
-
-
-    def update_holdings_from_fill(self, fill):
-        """
-        同时需要根据 FillEvent 更新目前的净值信息
-
-        Parameters:
-        fill - The FillEvent object to update the holdings with.
-        """
-        # Check whether the fill is a buy or sell
-        fill_dir = 0
-        if fill.direction == 'BUY':
-            fill_dir = 1
-        if fill.direction == 'SELL':
-            fill_dir = -1
-
-        # Update holdings list with new quantities
-        fill_cost = self.trades.get_latest_trades(fill.symbol)[0][0]  # Close price
-        cost = fill_dir * fill_cost * fill.quantity
-        self.current_holdings[fill.symbol_exchange] += cost
-        self.current_holdings['commission'] += fill.commission
-        self.current_holdings['cash'] -= (cost + fill.commission)
-        self.current_holdings['total'] -= (cost + fill.commission)
-
-    def update_from_fill(self, event):
-        """
-        根据 FillEvent 调用上面的方法
-        """
-        if event.type == 'FILL':
-            self.update_positions_from_fill(event)
-            self.update_holdings_from_fill(event)
-
-    def generate_naive_order(self, signal):
-        """
-        针对 naive strategy 进行简单的下单
-
-        Parameters:
-        signal - The SignalEvent signal information.
-        """
-        order = None
-
-        symbol_exchange = signal.symbol_exchange
-        direction = signal.signal_type
-        strength = signal.strength
-
-        mkt_quantity = floor(100 * strength)
-        cur_quantity = self.current_positions[symbol_exchange]
-        order_type = 'MKT'
-
-        if direction == 'LONG' and cur_quantity == 0:
-            order = OrderEvent(symbol_exchange, order_type, mkt_quantity, 'BUY')
-        if direction == 'SHORT' and cur_quantity == 0:
-            order = OrderEvent(symbol_exchange, order_type, mkt_quantity, 'SELL')   
-    
-        if direction == 'EXIT' and cur_quantity > 0:
-            order = OrderEvent(symbol_exchange, order_type, abs(cur_quantity), 'SELL')
-        if direction == 'EXIT' and cur_quantity < 0:
-            order = OrderEvent(symbol_exchange, order_type, abs(cur_quantity), 'BUY')
-        return order
-
-    def update_signal(self, event):
-        """
-        Acts on a SignalEvent to generate new orders based on the portfolio logic.
-        """
-        if event.type == 'SIGNAL':
-            order_event = self.generate_naive_order(event)
-            self.events.put(order_event)
+        if event.type == "FILL":
+            # 更新持仓信息
+            if event.direction=="BUY":
+                self.current_positions[event.symbol] += abs(event.quantity)
+            if event.direction=="SELL":
+                self.current_positions[event.symbol] -= abs(event.quantity)
+            self.all_positions[event.symbol][self.datahandler.backtest_now] = self.current_positions[event.symbol]
+            
+            # 更新账户余额
+            self.current_holdings['cash'] -= event.cash_cost
+            self.all_holdings['cash'][self.datahandler.backtest_now] = self.current_holdings['cash']
+            
+            # 更新净值信息
+            trades_s = self.datahandler.registered_symbol_exchange_trade_data[event.symbol][self.datahandler.latest_symbol_exchange_trade_data_time[event.symbol]][-1]
+            change_of_holdings = trades_s.price * self.current_positions[event.symbol] - self.current_holdings[event.symbol]
+            self.current_holdings[event.symbol] += change_of_holdings
+            self.all_holdings[event.symbol][self.datahandler.backtest_now] = self.current_holdings[event.symbol]
+            self.current_holdings['net_value'] += change_of_holdings
+            self.all_holdings['net_value'][self.datahandler.backtest_now] = self.current_holdings['net_value']
 
     def create_equity_curve_dataframe(self):
         """

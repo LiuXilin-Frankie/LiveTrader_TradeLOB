@@ -86,18 +86,19 @@ class FillEvent(Event):
     FillEvent
     """
 
-    def __init__(self, timestamp, symbol, exchange, direction, quantity, price, fill_flag, is_Maker):
+    def __init__(self, timestamp, symbol, exchange, direction, quantity, price, is_Maker):
         self.type = 'FILL'
         self.timestamp = timestamp     # timestamp of Fill
         self.symbol = symbol
-        self.exchange = exchange       # 交易所，不用的交易所有不同的手续费
+        self.exchange = exchange       # 交易所，不同的交易所有不同的手续费
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # filled quantity
         self.price = price             # average price of filled orders
-        self.fill_flag = fill_flag     # 'PARTIAL', 'ALL', 'CANCELED'
+        #self.fill_flag = fill_flag     # 'PARTIAL', 'ALL', 'CANCELED'
         self.is_Maker = is_Maker       # 是否是 Maker 成交，用于判断手续费
 
         self.fee = self.get_fee()      # 这里仅是费率，如果要考虑交易量的问题，应该进一步计算commission。这一版暂时忽略
+        self.cal_cash_cost()
 
     def get_fee(self):
         """
@@ -111,5 +112,11 @@ class FillEvent(Event):
         if self.exchange.lower()=='binance':
             if self.is_Maker: return -0.00006
             else: return 0.000173
+
+    def cal_cash_cost(self):
+        if self.direction=="BUY":
+            self.cash_cost = self.quantity * self.price *(1+self.fee)
+        if self.direction=="SELL":
+            self.cash_cost = -(self.quantity * self.price *(1-self.fee))
 
 
