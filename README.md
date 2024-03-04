@@ -9,7 +9,7 @@
 
 
 # System FrameWork
-Idea from [quantstart article](https://www.quantstart.com/articles/Event-Driven-Backtesting-with-Python-Part-I/)
+Idea from [quantstart article](https://www.quantstart.com/articles/Event-Driven-Backtesting-with-Python-Part-I/), 以下是该网站对于这一类回测系统基本架构的描述。如果您想了解本回测框架相比于该网站的区别，请看下文‘特性’。
 
 
 To apply an event-driven approach to a backtesting system it is necessary to define our components (or objects) that will handle specific tasks:
@@ -29,10 +29,12 @@ To apply an event-driven approach to a backtesting system it is necessary to def
 + The Loop - All of these components are wrapped in an event-loop that correctly handles all Event types, routing them to the appropriate component.
 
 
-### 数据特性：
+### 特性：
 1. 为了满足跨交易所交易的策略需求，品类命名被写为 "symbol_exchange" 的形式，比如说 "btc_usdt_binance", 所有需要考虑的品类名被存储在 symbol_exchange_list 中
 2. 推送的顺序规则为: 1.品类名按照字母大小顺序排序, 2. trade 优先于 tick(LOB) 
 3. 同一个时间点 timestamp 可能有多种数据，可能有多次 trade 信息。
+4. 区别于原网站 1.使用迭代器推送整个数据，2.对时间异步的情况使用插值fillna的方法。本回测框架作出改进：1.将回测进行到的时间戳作为迭代器并且可以由外部访问；2.如果该时间下该币对没有数据，则不推送；3.约束了推送的数据格式，每一条交易是一个单独的object，同一时间的所有交易信息由list推送过来
+5. Portfolio 不再掌管策略的下单，而是仅保留记录净值，仓位，成本等信息的功能。这也就代表了，portfolio模块可以相对固定，仅需要修改Strategy就可以使得代码运行起来。同时删除了 Signal 这个信息
 
 
 

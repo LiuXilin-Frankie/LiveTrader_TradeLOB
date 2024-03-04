@@ -82,9 +82,9 @@ class NaivePortfolio(Portfolio):
         d['total'] = self.initial_capital
         return d
 
-    def update_timeindex(self, event):
+    def update_from_market(self, event):
         """
-        更新信息
+        根据最新的市场行情信息更新数据
         1. current holdings 在每次接收到 MarketEvent 就会更新
         2. current position 在每次接收到 FillEvent 就会更新
         """
@@ -154,7 +154,7 @@ class NaivePortfolio(Portfolio):
         self.current_holdings['cash'] -= (cost + fill.commission)
         self.current_holdings['total'] -= (cost + fill.commission)
 
-    def update_fill(self, event):
+    def update_from_fill(self, event):
         """
         根据 FillEvent 调用上面的方法
         """

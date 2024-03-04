@@ -37,15 +37,15 @@ while True:
                 if event.type == 'MARKET':
                     print('get market event', event)
                     strategy.calculate_signals(event)
-                    #portfolio.update_timeindex(event)
+                    #portfolio.update_from_market(event)
 
-                elif event.type == 'SIGNAL':
-                    #portfolio.update_signal(event)
-                    print('get signal event', event)
-                    #sys.exit()
+                # elif event.type == 'SIGNAL':
+                #     #portfolio.update_signal(event)
+                #     print('get signal event', event)
+                #     #sys.exit()
 
                 # elif event.type == 'ORDER':
                 #     executor.execute_order(event)
 
                 # elif event.type == 'FILL':
-                #     portfolio.update_fill(event)
+                #     portfolio.update_from_fill(event)

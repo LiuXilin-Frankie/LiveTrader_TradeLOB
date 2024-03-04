@@ -38,7 +38,9 @@ class BuyAndHoldStrategy(Strategy):
         self.datahandler = datahandler
         self.symbol_exchange_list = self.datahandler.symbol_exchange_list
         self.events = events
-        # Once buy & hold signal is given, these are set to True
+        self.order_id = 0
+        
+        # Store useful infomation for order generate and stop loss
         self.bought = self._calculate_initial_bought()
 
     def _calculate_initial_bought(self):
