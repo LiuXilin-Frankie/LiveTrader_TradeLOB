@@ -56,9 +56,6 @@ class SignalEvent(Event):
         self.timestamp = timestamp
         self.signal_direction = signal_direction   # 'BUY' or 'SELL'
 
-    def __repr__(self):
-        return "<SignalEvent> [%s] %s %s" % (self.timestamp, self.symbol, self.signal_direction)
-
 
 class OrderEvent(Event):
     """
@@ -82,9 +79,6 @@ class OrderEvent(Event):
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # non-negative
         self.price = price             # limit order price. If market order, this field is ignored
-
-    def __repr__(self):
-        return "<OrderEvent> [%s] %s %s %s %d @ %.2f" % (self.timestamp, self.symbol, self.order_type, self.direction, self.quantity, self.price)
 
 
 class FillEvent(Event):
@@ -118,6 +112,4 @@ class FillEvent(Event):
             if self.is_Maker: return -0.00006
             else: return 0.000173
 
-    def __repr__(self):
-        return "<FillEvent> [%s] %s %s %d@%.2f" % (self.timestamp, self.symbol, self.direction, self.quantity, self.price)
 

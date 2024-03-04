@@ -87,6 +87,7 @@ class LogPlotPortfolio(Portfolio):
         根据推送过来的订单成交信息更新 positions 和 holdings
         只更新 成交币对的 positions 和 holdings
         """
+        
 
 
 
