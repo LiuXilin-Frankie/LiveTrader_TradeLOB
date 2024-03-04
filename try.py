@@ -4,19 +4,20 @@ import os
 
 from DataHandler.TradeLOBDataHandler import HistoricTradeLOBDataHandler
 from Strategy.strategy import *
+from portfolio import *
 
 
 event_queue = queue.Queue()
 data_handler = HistoricTradeLOBDataHandler(event_queue, 
-                                           symbol_list=['xrp_usdt','xrp_usdt'],
-                                           exchange_list=['binance','okex'], 
-                                           file_dir = 'data_sample/', 
+                                           symbol_list=['btc_usdt','eth_usdt','xrp_usdt'],
+                                           exchange_list=['binance','binance','binance'], 
+                                           file_dir = 'data_sample/small_sample/', 
                                            is_csv=False)
 
 
 
 strategy = BuyAndHoldStrategy(event_queue, data_handler)       # 策略实例。实际应用中应该有多个策略实例
-# portfolio = NaivePortfolio(event_queue, data_handler)      # 组合
+portfolio = NaivePortfolio(event_queue, data_handler)      # 组合
 # executor = BarBacktestExector(event_queue, data_handler)   # 回测模拟成交器；如果是实盘这里就是算法交易模块
 
 while True:
@@ -34,15 +35,11 @@ while True:
             break
         else:
             if event is not None:
+
                 if event.type == 'MARKET':
                     print('get market event', event)
                     strategy.calculate_signals(event)
-                    #portfolio.update_from_market(event)
-
-                # elif event.type == 'SIGNAL':
-                #     #portfolio.update_signal(event)
-                #     print('get signal event', event)
-                #     #sys.exit()
+                    portfolio.update_from_market(event)
 
                 # elif event.type == 'ORDER':
                 #     executor.execute_order(event)

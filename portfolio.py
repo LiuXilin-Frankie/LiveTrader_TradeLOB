@@ -10,7 +10,7 @@ refer to https://www.quantstart.com/articles/Event-Driven-Backtesting-with-Pytho
 import datetime
 import numpy as np
 import pandas as pd
-import Queue
+import queue
 
 from abc import ABCMeta, abstractmethod
 from math import floor
@@ -27,7 +27,7 @@ class NaivePortfolio(Portfolio):
     仅是进行简单的测试作用
     """
     
-    def __init__(self, trades, events, start_date, initial_capital=100000.0):
+    def __init__(self, trades, events, start_time, initial_capital=100000.0):
         """
         使用行情数据进行初始化. 包括开始的时间以及初识的资金量
 
@@ -42,7 +42,7 @@ class NaivePortfolio(Portfolio):
         self.trades = trades
         self.events = events
         self.symbol_exchange_list = self.trades.symbol_exchange_list
-        self.start_date = start_date
+        self.start_time = start_time
         self.initial_capital = initial_capital
         
         self.all_positions = self.construct_all_positions()

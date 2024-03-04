@@ -66,7 +66,7 @@ class OrderEvent(Event):
     The order contains: 1.symbol, 2.type (market or limit or ....), 3.quantity, 4.direction, 5.arrive_time.
     """
 
-    def __init__(self, timestamp, symbol, order_type, direction, quantity, price, arrive_time):
+    def __init__(self, timestamp, symbol, order_id, order_type, direction, quantity, price=None):
         """
         Parameters:
         symbol - The instrument to trade.
@@ -77,11 +77,11 @@ class OrderEvent(Event):
         self.type = 'ORDER'
         self.timestamp = timestamp
         self.symbol = symbol
+        self.order_id = order_id
         self.order_type = order_type   # 'MKT', 'LMT' OR 'CANCEL_ORDER_REQ', or others....
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # non-negative
         self.price = price             # limit order price. If market order, this field is ignored
-        self.arrive_time = arrive_time # 订单到达交易所的时间
 
     def __repr__(self):
         return "<OrderEvent> [%s] %s %s %s %d @ %.2f" % (self.timestamp, self.symbol, self.order_type, self.direction, self.quantity, self.price)

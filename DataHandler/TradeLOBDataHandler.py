@@ -145,9 +145,9 @@ class HistoricTradeLOBDataHandler(DataHandler):
 
             # 初始化 latest 和 registered
             self.registered_symbol_exchange_trade_data[s] = {}
-            self.latest_symbol_exchange_trade_data_time[s] = []
+            self.latest_symbol_exchange_trade_data_time[s] = None
             self.registered_symbol_exchange_LOB_data[s] = {}
-            self.latest_symbol_exchange_LOB_data_time[s] = []
+            self.latest_symbol_exchange_LOB_data_time[s] = None
             print('complete init of the data:',s)
 
             # 集合时间的index
@@ -164,11 +164,11 @@ class HistoricTradeLOBDataHandler(DataHandler):
         for s in self.symbol_exchange_list:
             try:
                 self.registered_symbol_exchange_trade_data[s][self.backtest_now] = self.symbol_exchange_trade_data[s][self.backtest_now]
-                self.latest_symbol_exchange_trade_data_time[s].append(self.backtest_now)
+                self.latest_symbol_exchange_trade_data_time[s] = self.backtest_now
             except: pass
             try:
                 self.registered_symbol_exchange_LOB_data[s][self.backtest_now] = self.symbol_exchange_LOB_data[s][self.backtest_now]
-                self.latest_symbol_exchange_LOB_data_time[s].append(self.backtest_now)
+                self.latest_symbol_exchange_LOB_data_time[s] = self.backtest_now
             except: pass
 
     def update_TradeLOB(self):
