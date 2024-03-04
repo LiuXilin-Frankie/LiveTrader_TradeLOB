@@ -99,10 +99,10 @@ class BuyAndHoldStrategy(Strategy):
                 # 如果我们还没有进行第一次建仓
                 if self.bought[s] is None:
                     if self.datahandler.latest_symbol_exchange_LOB_data_time[s] is None: continue
-                    orderbook_info = self.datahandler.registered_symbol_exchange_LOB_data[s][self.datahandler.latest_symbol_exchange_LOB_data_time[s]]
+                    orderbook_info = self.datahandler.registered_symbol_exchange_LOB_data[s][self.datahandler.latest_symbol_exchange_LOB_data_time[s]][0]
                     # 生成order信息
                     # 这里 timestamp=(time_now + 2*self.order_latency) 指的是 order 到达交易所的时间，即挂在orderbook上的时间
-                    order = OrderEvent(s, timestamp=(time_now + 2*self.order_latency), symbol=s, order_id = self._get_order_id(),
+                    order = OrderEvent(timestamp=time_now+2*self.order_latency, symbol=s, order_id = self._get_order_id(),
                                        order_type="MKT", direction='BUY', quantity=(1000/orderbook_info.ask1))
                     self.events.put(order)
                     self.bought[s] = Strategy_Info(symbol=order.symbol, order_id=order.order_id,  signal_timestamp=time_now)

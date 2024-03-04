@@ -58,14 +58,15 @@ class HistoricTradeLOBDataHandler(DataHandler):
         print('backtest on: ', self.symbol_exchange_list)
 
         # trade 数据
-        self.symbol_exchange_trade_data = {}                # 从csv读取的表单
+        self.__symbol_exchange_trade_data = {}                # 从csv读取的表单
         self.registered_symbol_exchange_trade_data = {}     # 最新的以及历史的数据
         self.latest_symbol_exchange_trade_data_time = {}    # 更新到的时间表
         # LOB 数据 (最高频的LOB 仅保存bid1&ask1)
-        self.symbol_exchange_LOB_data = {}                  # 从csv读取的表单
+        self.__symbol_exchange_LOB_data = {}                  # 从csv读取的表单
         self.registered_symbol_exchange_LOB_data = {}       # 最新的以及历史的数据
         self.latest_symbol_exchange_LOB_data_time = {}      # 更新到的时间表
         # 时间相关的指标
+        self.start_time = None
         self.comb_time_index_iter = None
         self.backtest_now = None
         self.continue_backtest = True 
@@ -129,19 +130,19 @@ class HistoricTradeLOBDataHandler(DataHandler):
             history_data_LOB = self._process_duplicated_time(history_data_LOB)  #删除重复的时间
             
             # 记录trade数据 目前很花时间
-            self.symbol_exchange_trade_data[s] = {i:[] for i in history_data_trade.time.unique()}
+            self.__symbol_exchange_trade_data[s] = {i:[] for i in history_data_trade.time.unique()}
             for i in range(len(history_data_trade.time)):
                 market_event = Trade(symbol=s, price=history_data_trade['price'][i], qty=history_data_trade['qty'][i], 
                                      is_buyer_maker=history_data_trade['is_buyer_maker'][i], timestamp=history_data_trade['time'][i])
-                self.symbol_exchange_trade_data[s][market_event.timestamp] += [market_event]
+                self.__symbol_exchange_trade_data[s][market_event.timestamp] += [market_event]
             
             # 记录LOB数据 目前很花时间
-            self.symbol_exchange_LOB_data[s] = {i:[] for i in history_data_LOB.time.unique()}
+            self.__symbol_exchange_LOB_data[s] = {i:[] for i in history_data_LOB.time.unique()}
             for i in range(len(history_data_LOB.time)):
                 market_event = Orderbook(symbol=s, bid1=history_data_LOB['bid1'][i], bidqty1=history_data_LOB['bidqty1'][i], 
                                          ask1=history_data_LOB['ask1'][i], askqty1=history_data_LOB['askqty1'][i], 
                                          timestamp=history_data_LOB['time'][i])
-                self.symbol_exchange_LOB_data[s][market_event.timestamp] += [market_event]
+                self.__symbol_exchange_LOB_data[s][market_event.timestamp] += [market_event]
 
             # 初始化 latest 和 registered
             self.registered_symbol_exchange_trade_data[s] = {}
@@ -158,16 +159,17 @@ class HistoricTradeLOBDataHandler(DataHandler):
 
         comb_time_index = list(set(comb_time_index))
         comb_time_index.sort()
+        self.start_time = comb_time_index[0]
         self.comb_time_index_iter = iter(comb_time_index)
 
     def _get_new_data(self):
         for s in self.symbol_exchange_list:
             try:
-                self.registered_symbol_exchange_trade_data[s][self.backtest_now] = self.symbol_exchange_trade_data[s][self.backtest_now]
+                self.registered_symbol_exchange_trade_data[s][self.backtest_now] = self.__symbol_exchange_trade_data[s][self.backtest_now]
                 self.latest_symbol_exchange_trade_data_time[s] = self.backtest_now
             except: pass
             try:
-                self.registered_symbol_exchange_LOB_data[s][self.backtest_now] = self.symbol_exchange_LOB_data[s][self.backtest_now]
+                self.registered_symbol_exchange_LOB_data[s][self.backtest_now] = self.__symbol_exchange_LOB_data[s][self.backtest_now]
                 self.latest_symbol_exchange_LOB_data_time[s] = self.backtest_now
             except: pass
 
@@ -183,3 +185,11 @@ class HistoricTradeLOBDataHandler(DataHandler):
             print('get new market events and push to queue')
         except StopIteration:
             self.continue_backtest = False
+
+    def get_latest_trades(self):
+        outcomes = dict()
+        for s in self.symbol_exchange_list:
+            if self.latest_symbol_exchange_trade_data_time is None: continue
+            latest_time = self.latest_symbol_exchange_trade_data_time[s]
+            outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1]
+        return outcomes
