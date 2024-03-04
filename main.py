@@ -8,7 +8,7 @@ import time
 
 from DataHandler.CSVDataHandler import CSVDataHandler
 from Strategy.strategy import RandomStrategy
-from portfolio import NaivePortfolio
+from Portfolio.portfolio import NaivePortfolio
 from BarBacktestExecutor import BarBacktestExector
 
 

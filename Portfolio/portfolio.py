@@ -14,6 +14,8 @@ import queue
 
 from abc import ABCMeta, abstractmethod
 from math import floor
+import sys
+sys.path.append("...")
 
 from event import FillEvent, OrderEvent
 from object import Portfolio

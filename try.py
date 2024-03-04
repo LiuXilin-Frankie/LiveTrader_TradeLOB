@@ -4,7 +4,7 @@ import os
 
 from DataHandler.TradeLOBDataHandler import HistoricTradeLOBDataHandler
 from Strategy.strategy import *
-from portfolio import *
+from Portfolio.portfolio import *
 
 
 event_queue = queue.Queue()
