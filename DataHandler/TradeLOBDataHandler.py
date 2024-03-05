@@ -21,7 +21,7 @@ import queue
 from typing import List, Tuple, Dict
 from abc import ABCMeta, abstractmethod
 import sys
-sys.path.append("...")
+sys.path.append("..")
 
 from event import MarketEvent
 from object import DataHandler, DataHandlerError
