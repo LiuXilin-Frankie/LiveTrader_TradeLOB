@@ -189,7 +189,7 @@ class HistoricTradeLOBDataHandler(DataHandler):
     def get_latest_trades(self):
         outcomes = dict()
         for s in self.symbol_exchange_list:
-            if self.latest_symbol_exchange_trade_data_time is None: continue
             latest_time = self.latest_symbol_exchange_trade_data_time[s]
-            outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1]
+            if latest_time is not None:
+                outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1]
         return outcomes

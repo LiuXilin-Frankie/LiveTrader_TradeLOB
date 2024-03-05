@@ -77,6 +77,7 @@ class LogPlotPortfolio(Portfolio):
         trades = self.datahandler.get_latest_trades()
         net_value = 0
         for s in self.symbol_exchange_list:
+            if s not in trades: continue
             self.current_holdings[s] = trades[s].price * self.current_positions[s]
             self.all_holdings[s][self.datahandler.backtest_now] = self.current_holdings[s]
             net_value += self.current_holdings[s]
