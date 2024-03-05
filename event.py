@@ -63,17 +63,19 @@ class OrderEvent(Event):
     The order contains: 1.symbol, 2.type (market or limit or ....), 3.quantity, 4.direction, 5.arrive_time.
     """
 
-    def __init__(self, timestamp, symbol, order_id, order_type, direction, quantity, price=None, execution_end_time=float('inf')):
+    def __init__(self, timestamp, symbol, order_id, order_type, direction, quantity, price=None, 
+                 #execution_end_time=float('inf'),
+                 ):
         """
         Parameters:
         timestamp               # 订单的生效时间，即到达交易所的时间
         symbol                  # 资产名
         order_id                # 订单id 由strategy生成 便于取消订单
-        order_type              # 订单类型 现在支持: "MARKET", "LIMIT", "IOC", ""
-        direction 
-        quantity 
-        price 
-        execution_end_time
+        order_type              # 订单类型 现在支持: "MARKET", "LIMIT", "IOC", "POST_ONLY"
+        direction               # 订单的方向 "BUY", "SELL"
+        quantity                # 订单数量
+        price                   # 订单价格，如果是市价单可以为 None, init 的时候会检查
+        execution_end_time      # 订单的最后执行时间 目前版本暂时不支持
         """
         self.type = 'ORDER'
         self.timestamp = timestamp
@@ -83,7 +85,7 @@ class OrderEvent(Event):
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # non-negative
         self.price = price             # limit order price. If market order, this field is ignored
-        self.execution_end_time = execution_end_time
+        #self.execution_end_time = execution_end_time
 
         self.check_price()
 
@@ -98,11 +100,12 @@ class FillEvent(Event):
     FillEvent
     """
 
-    def __init__(self, timestamp, symbol, exchange, direction, quantity, price, is_Maker):
+    def __init__(self, timestamp, symbol, exchange, order_id, direction, quantity, price, is_Maker):
         self.type = 'FILL'
         self.timestamp = timestamp     # timestamp of Fill
         self.symbol = symbol
         self.exchange = exchange       # 交易所，不同的交易所有不同的手续费
+        self.order_id = order_id
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # filled quantity
         self.price = price             # average price of filled orders
