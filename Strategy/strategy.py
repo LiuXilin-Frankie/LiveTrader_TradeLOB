@@ -51,7 +51,7 @@ class BuyAndHoldStrategy(Strategy):
     并且在每隔 20min 进行一次 rebalance
     """
 
-    def __init__(self, events, datahandler, order_latency=50):
+    def __init__(self, events, datahandler, portfolio, order_latency=50):
         """
         Initialises the buy and hold strategy.
 
@@ -62,6 +62,7 @@ class BuyAndHoldStrategy(Strategy):
         self.datahandler = datahandler
         self.symbol_exchange_list = self.datahandler.symbol_exchange_list
         self.events = events
+        self.portfolio = portfolio
         self.order_latency = order_latency
         self.order_id = 0
         

@@ -10,14 +10,13 @@ event_queue = queue.Queue()
 data_handler = HistoricTradeLOBDataHandler(event_queue, 
                                            symbol_list=['btc_usdt','eth_usdt','xrp_usdt'],
                                            exchange_list=['binance','binance','binance'], 
-                                           # file_dir = 'data_sample/small_sample/', 
-                                           file_dir = 'data_sample/',
+                                           file_dir = 'data_sample/small_sample/', 
+                                           # file_dir = 'data_sample/',
                                            is_csv=False)
 
 
-
-strategy = BuyAndHoldStrategy(event_queue, data_handler)       # 策略实例。实际应用中应该有多个策略实例
 portfolio = LogPlotPortfolio(event_queue, data_handler)      # 组合
+strategy = BuyAndHoldStrategy(event_queue, data_handler, portfolio)       # 策略实例。实际应用中应该有多个策略实例
 # executor = BarBacktestExector(event_queue, data_handler)   # 回测模拟成交器；如果是实盘这里就是算法交易模块
 
 
@@ -29,8 +28,8 @@ while True:
     else:
         break
     
-    cnt+=1
-    if cnt>2000: break
+    # cnt+=1
+    # if cnt>2000: break
 
     # Handle the events
     while True:

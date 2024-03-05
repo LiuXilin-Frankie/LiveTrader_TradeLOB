@@ -63,13 +63,17 @@ class OrderEvent(Event):
     The order contains: 1.symbol, 2.type (market or limit or ....), 3.quantity, 4.direction, 5.arrive_time.
     """
 
-    def __init__(self, timestamp, symbol, order_id, order_type, direction, quantity, price=None):
+    def __init__(self, timestamp, symbol, order_id, order_type, direction, quantity, price=None, execution_end_time=float('inf')):
         """
         Parameters:
-        symbol - The instrument to trade.
-        order_type - 'MKT' or 'LMT' for Market or Limit.
-        quantity - Non-negative integer for quantity.
-        direction - 'BUY' or 'SELL' for long or short.
+        timestamp               # 订单的生效时间，即到达交易所的时间
+        symbol                  # 资产名
+        order_id                # 订单id 由strategy生成 便于取消订单
+        order_type              # 订单类型 现在支持: "MARKET", "LIMIT", "IOC", ""
+        direction 
+        quantity 
+        price 
+        execution_end_time
         """
         self.type = 'ORDER'
         self.timestamp = timestamp
@@ -79,6 +83,14 @@ class OrderEvent(Event):
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # non-negative
         self.price = price             # limit order price. If market order, this field is ignored
+        self.execution_end_time = execution_end_time
+
+        self.check_price()
+
+        def check_price(self):
+            if self.price is None:
+                if self.order_type != "MKT":
+                    raise ValueError('OrderEvent missing arguments price')
 
 
 class FillEvent(Event):
