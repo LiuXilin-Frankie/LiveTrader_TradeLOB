@@ -36,25 +36,25 @@ class MarketEvent(Event):
         self.type = 'MARKET'
 
 
-class SignalEvent(Event):
-    """
-    Handles the event of sending a Signal from a Strategy object.
-    This is received by a Portfolio object and acted upon.
-    """
+# class SignalEvent(Event):
+#     """
+#     Handles the event of sending a Signal from a Strategy object.
+#     This is received by a Portfolio object and acted upon.
+#     """
 
-    def __init__(self, symbol, timestamp, signal_direction):
-        """
-        Initialises the SignalEvent.
+#     def __init__(self, symbol, timestamp, signal_direction):
+#         """
+#         Initialises the SignalEvent.
 
-        Parameters:
-        symbol - The ticker symbol, e.g. 'GOOG'.
-        datetime - The timestamp at which the signal was generated.
-        signal_type - 'BUY' or 'SELL'.
-        """
-        self.type = 'SIGNAL'
-        self.symbol = symbol
-        self.timestamp = timestamp
-        self.signal_direction = signal_direction   # 'BUY' or 'SELL'
+#         Parameters:
+#         symbol - The ticker symbol, e.g. 'GOOG'.
+#         datetime - The timestamp at which the signal was generated.
+#         signal_type - 'BUY' or 'SELL'.
+#         """
+#         self.type = 'SIGNAL'
+#         self.symbol = symbol
+#         self.timestamp = timestamp
+#         self.signal_direction = signal_direction   # 'BUY' or 'SELL'
 
 
 class OrderEvent(Event):
@@ -81,7 +81,7 @@ class OrderEvent(Event):
         self.timestamp = timestamp
         self.symbol = symbol
         self.order_id = order_id
-        self.order_type = order_type   # 'MKT', 'LMT' OR 'CANCEL_ORDER_REQ', or others....
+        self.order_type = order_type   # 'MARKET', 
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # non-negative
         self.price = price             # limit order price. If market order, this field is ignored
@@ -89,10 +89,10 @@ class OrderEvent(Event):
 
         self.check_price()
 
-        def check_price(self):
-            if self.price is None:
-                if self.order_type != "MKT":
-                    raise ValueError('OrderEvent missing arguments price')
+    def check_price(self):
+        if self.price is None:
+            if self.order_type != "MARKET":
+                raise ValueError('OrderEvent missing arguments price')
 
 
 class FillEvent(Event):

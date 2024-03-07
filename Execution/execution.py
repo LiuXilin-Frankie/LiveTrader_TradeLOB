@@ -15,7 +15,7 @@ sys.path.append("..")
 
 from event import FillEvent, OrderEvent
 from object import ExecutionHandler
-from OrderDataStructure import LiveOrder
+from Execution.OrderDataStructure import LiveOrder
 
 
 class SimulatedExecutionHandler(ExecutionHandler):
@@ -55,7 +55,7 @@ class SimulatedExecutionHandler(ExecutionHandler):
             if len(self.live_orders_on_exchange[s])==0:
                 self.live_orders_on_exchange_min_time[s] = None
             else:
-                tmp = min([i.timestamp for i in self.live_orders_on_exchange])
+                tmp = min([i.timestamp for i in self.live_orders_on_exchange[s]])
                 self.live_orders_on_exchange_min_time[s] = tmp
 
     def on_order_event(self, event):

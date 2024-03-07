@@ -1,6 +1,7 @@
 import queue
 import time
 import os
+import sys
 
 from DataHandler.TradeLOBDataHandler import HistoricTradeLOBDataHandler
 from Strategy.strategy import BuyAndHoldStrategy
@@ -20,10 +21,9 @@ portfolio = LogPlotPortfolio(event_queue, data_handler)      # 组合
 executor = SimulatedExecutionHandler(event_queue, data_handler)   # 回测模拟成交器；如果是实盘这里就是算法交易模块
 strategy = BuyAndHoldStrategy(event_queue, data_handler, portfolio, executor)       # 策略实例。实际应用中应该有多个策略实例
 
-
 cnt = 0
 while True:
-    # Update the bars (specific backtest code, as opposed to live trading)
+    # Update the trade/LOB (specific backtest code, as opposed to live trading)
     if data_handler.continue_backtest == True:
         data_handler.update_TradeLOB()
     else:
@@ -48,8 +48,10 @@ while True:
                     executor.on_market_event(event)
 
                 # elif event.type == 'ORDER':
-                #     executor.execute_order(event)
+                #     executor.on_order_event(event)
 
                 # elif event.type == 'FILL':
                 #     print('get fill event', event)
-                #     portfolio.update_positions_from_fill(event)
+                #     #portfolio.update_positions_from_fill(event)
+                #     strategy
+                #     sys.exit()
