@@ -74,11 +74,11 @@ class LogPlotPortfolio(Portfolio):
         根据 MarketEvent 更新 holdings 信息
         1.目前是默认全部重新计算一遍，其实可以只计算产生更新的，后续可以从这里优化运算时间。
         """
-        trades = self.datahandler.get_latest_trades()
+        trades = self.datahandler.get_latest_prices()
         net_value = 0
         for s in self.symbol_exchange_list:
             if s not in trades: continue
-            self.current_holdings[s] = trades[s].price * self.current_positions[s]
+            self.current_holdings[s] = trades[s] * self.current_positions[s]
             self.all_holdings[s][self.datahandler.backtest_now] = self.current_holdings[s]
             net_value += self.current_holdings[s]
         self.current_holdings['net_value'] = net_value

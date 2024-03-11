@@ -264,6 +264,10 @@ class HistoricLOBHourlyDataHandler(DataHandler):
             for s in self.symbol_exchange_list:
                 latest_time = self.latest_symbol_exchange_trade_data_time[s]
                 if latest_time is not None:
-                    outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1]
+                    outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1].price
         except:
-            
+            for s in self.symbol_exchange_list:
+                latest_time = self.latest_symbol_exchange_LOB_data_time[s]
+                if latest_time is not None:
+                    outcomes[s] = (self.registered_symbol_exchange_LOB_data[s][latest_time][-1].bid1 +\
+                          self.registered_symbol_exchange_LOB_data[s][latest_time][-1].ask1)/2
