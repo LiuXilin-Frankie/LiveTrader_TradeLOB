@@ -250,7 +250,7 @@ class HistoricLOBHourlyDataHandler(DataHandler):
         for s in self.symbol_exchange_list:
             latest_time = self.latest_symbol_exchange_trade_data_time[s]
             if latest_time is not None:
-                outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1]
+                outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1].price
         return outcomes
     
     def get_latest_prices(self):

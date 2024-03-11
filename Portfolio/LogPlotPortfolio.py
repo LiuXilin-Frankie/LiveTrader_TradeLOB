@@ -26,7 +26,7 @@ class LogPlotPortfolio(Portfolio):
     只用于记录的 Portfolio 模块
     """
     
-    def __init__(self, events, datahandler, initial_capital=100000.0):
+    def __init__(self, events, datahandler, initial_capital=100000.0, log_interval=None):
         """
         使用行情数据进行初始化. 包括开始的时间以及初识的资金量
 
@@ -45,6 +45,8 @@ class LogPlotPortfolio(Portfolio):
         self.symbol_exchange_list = self.datahandler.symbol_exchange_list
         self.start_time = self.datahandler.start_time
         self.initial_capital = initial_capital
+        self.log_interval = log_interval
+        self.last_log_time = None
         
         self.construct_positions_holdings()
 
@@ -75,6 +77,13 @@ class LogPlotPortfolio(Portfolio):
         1.目前是默认全部重新计算一遍，其实可以只计算产生更新的，后续可以从这里优化运算时间。
         只有发生更改我们才会记录
         """
+        # 间隔一定的时间进行记录
+        if self.log_interval is not None:
+            if self.datahandler.backtest_now - self.last_log_time > self.log_interval:
+                self.last_log_time = self.datahandler.backtest_now
+            else: return
+
+        # 开始更新记录
         trades = self.datahandler.get_latest_prices()
         net_value = 0
         if trades is not None:
