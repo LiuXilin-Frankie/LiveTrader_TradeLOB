@@ -50,8 +50,10 @@ while True:
                 elif event.type == 'ORDER':
                     executor.on_order_event(event)
 
-                # elif event.type == 'FILL':
-                #     print('get fill event', event)
-                #     #portfolio.update_positions_from_fill(event)
-                #     strategy
-                #     sys.exit()
+                elif event.type == 'FILL':
+                    print('get fill event', event)
+                    portfolio.update_positions_from_fill(event)
+                    strategy.on_order_fill(event)
+                    #sys.exit()
+
+print(portfolio.all_holdings)

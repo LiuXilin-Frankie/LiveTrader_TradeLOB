@@ -73,16 +73,23 @@ class LogPlotPortfolio(Portfolio):
         """
         根据 MarketEvent 更新 holdings 信息
         1.目前是默认全部重新计算一遍，其实可以只计算产生更新的，后续可以从这里优化运算时间。
+        只有发生更改我们才会记录
         """
         trades = self.datahandler.get_latest_prices()
         net_value = 0
-        for s in self.symbol_exchange_list:
-            if s not in trades: continue
-            self.current_holdings[s] = trades[s] * self.current_positions[s]
-            self.all_holdings[s][self.datahandler.backtest_now] = self.current_holdings[s]
-            net_value += self.current_holdings[s]
-        self.current_holdings['net_value'] = net_value
-        self.all_holdings['net_value'][self.datahandler.backtest_now] = net_value
+        if trades is not None:
+            for s in self.symbol_exchange_list:
+                if s not in trades: continue
+                # 记录之前的值观察是否出现变动
+                current_value_s = trades[s] * self.current_positions[s]
+                if current_value_s != self.current_holdings[s]:
+                    self.current_holdings[s] = current_value_s
+                    self.all_holdings[s][self.datahandler.backtest_now] = self.current_holdings[s]
+                net_value += self.current_holdings[s]
+            # 记录总值
+            if net_value!= self.current_holdings['net_value']:
+                self.current_holdings['net_value'] = net_value
+                self.all_holdings['net_value'][self.datahandler.backtest_now] = net_value
 
     def update_positions_from_fill(self, event):
         """
@@ -102,8 +109,7 @@ class LogPlotPortfolio(Portfolio):
             self.all_holdings['cash'][self.datahandler.backtest_now] = self.current_holdings['cash']
             
             # 更新净值信息
-            trades_s = self.datahandler.registered_symbol_exchange_trade_data[event.symbol][self.datahandler.latest_symbol_exchange_trade_data_time[event.symbol]][-1]
-            change_of_holdings = trades_s.price * self.current_positions[event.symbol] - self.current_holdings[event.symbol]
+            change_of_holdings = event.price * self.current_positions[event.symbol] - self.current_holdings[event.symbol]
             self.current_holdings[event.symbol] += change_of_holdings
             self.all_holdings[event.symbol][self.datahandler.backtest_now] = self.current_holdings[event.symbol]
             self.current_holdings['net_value'] += change_of_holdings

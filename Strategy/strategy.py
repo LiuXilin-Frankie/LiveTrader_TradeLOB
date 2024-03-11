@@ -87,6 +87,9 @@ class BuyAndHoldStrategy(Strategy):
         self.order_id += 1
         return tmp
     
+    def on_order_fill(self,event):
+        pass
+    
     def calculate_signals(self, event):
         """
         如果一个资产没有被交易，我们生成信号并持有，如果已经有仓位，我们则忽略

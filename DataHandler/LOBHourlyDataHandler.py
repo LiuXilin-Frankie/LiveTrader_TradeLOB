@@ -271,3 +271,4 @@ class HistoricLOBHourlyDataHandler(DataHandler):
                 if latest_time is not None:
                     outcomes[s] = (self.registered_symbol_exchange_LOB_data[s][latest_time][-1].bid1 +\
                           self.registered_symbol_exchange_LOB_data[s][latest_time][-1].ask1)/2
+        return outcomes         
