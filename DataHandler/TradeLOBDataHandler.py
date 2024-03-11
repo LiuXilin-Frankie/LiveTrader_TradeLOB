@@ -67,6 +67,7 @@ class HistoricTradeLOBDataHandler(DataHandler):
         self.latest_symbol_exchange_LOB_data_time = {}      # 更新到的时间表
         # 时间相关的指标
         self.start_time = None
+        self.__comb_time_index = None
         self.comb_time_index_iter = None
         self.backtest_now = None
         self.continue_backtest = True 
@@ -160,6 +161,7 @@ class HistoricTradeLOBDataHandler(DataHandler):
         comb_time_index = list(set(comb_time_index))
         comb_time_index.sort()
         self.start_time = comb_time_index[0]
+        self.__comb_time_index = comb_time_index
         self.comb_time_index_iter = iter(comb_time_index)
 
     def _get_new_data(self):

@@ -106,6 +106,7 @@ class BuyAndHoldStrategy(Strategy):
                     # 这里 timestamp=(time_now + 2*self.order_latency) 指的是 order 到达交易所的时间，即挂在orderbook上的时间
                     order = OrderEvent(timestamp=time_now+2*self.order_latency, symbol=s, order_id = self._get_order_id(),
                                        order_type="MARKET", direction='BUY', quantity=(1000/orderbook_info.ask1))
+                    print('put orders to the exexution', order)
                     self.events.put(order)
                     self.bought[s] = Strategy_Info(symbol=order.symbol, order_id=order.order_id,  signal_timestamp=time_now)
 

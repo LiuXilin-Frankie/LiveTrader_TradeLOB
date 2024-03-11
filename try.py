@@ -3,19 +3,19 @@ import time
 import os
 import sys
 
-from DataHandler.TradeLOBDataHandler import HistoricTradeLOBDataHandler
+from DataHandler.LOBHourlyDataHandler import HistoricLOBHourlyDataHandler
 from Strategy.strategy import BuyAndHoldStrategy
 from Portfolio.LogPlotPortfolio import LogPlotPortfolio
 from Execution.execution import SimulatedExecutionHandler
 
 event_queue = queue.Queue()
-data_handler = HistoricTradeLOBDataHandler(event_queue, 
+data_handler = HistoricLOBHourlyDataHandler(event_queue, 
                                            symbol_list=['btc_usdt','eth_usdt','xrp_usdt'],
                                            exchange_list=['binance','binance','binance'], 
                                            file_dir = 'data_sample/small_sample/', 
                                            # file_dir = 'data_sample/',
                                            is_csv=False)
-
+#sys.exit()
 
 portfolio = LogPlotPortfolio(event_queue, data_handler)      # 组合
 executor = SimulatedExecutionHandler(event_queue, data_handler)   # 回测模拟成交器；如果是实盘这里就是算法交易模块
@@ -47,8 +47,8 @@ while True:
                     portfolio.update_holdings_from_market()
                     executor.on_market_event(event)
 
-                # elif event.type == 'ORDER':
-                #     executor.on_order_event(event)
+                elif event.type == 'ORDER':
+                    executor.on_order_event(event)
 
                 # elif event.type == 'FILL':
                 #     print('get fill event', event)

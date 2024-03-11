@@ -120,7 +120,9 @@ class SimulatedExecutionHandler(ExecutionHandler):
         
         # 获取最新的LOB数据
         ### 这里可能出现 订单簿的更显时间与回测系统的 backtest_now 不一致的情况。默认订单簿没有发生改变
-        live_LOB = self.datahandler.registered_symbol_exchange_LOB_data[self.datahandler.latest_symbol_exchange_LOB_data_time[order.symbol]][0]
+        print(self.datahandler.latest_symbol_exchange_LOB_data_time)
+        print(self.datahandler.registered_symbol_exchange_LOB_data)
+        live_LOB = self.datahandler.registered_symbol_exchange_LOB_data[order.symbol][self.datahandler.latest_symbol_exchange_LOB_data_time[order.symbol]][0]
         
         # 生成成交价格
         ### 系统忽略交易量这个概念，如果订单下单量超过订单簿的量会生成警告
