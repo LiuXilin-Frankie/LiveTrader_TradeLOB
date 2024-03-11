@@ -116,5 +116,13 @@ class BuyAndHoldStrategy(Strategy):
                 # 每过 20min 我们rebalance一次
                 if self.bought[s] is not None:
                     last_trade_time = self.bought[s].signal_timestamp
-                    if time_now - last_trade_time <  (1000*60*20): continue # 20min调仓一次
-                    pass
+                    if time_now - last_trade_time <  (1000*60*20):  # 20min调仓一次
+                        now_value = self.portfolio.current_holdings[s]
+                        orderbook_info = self.datahandler.registered_symbol_exchange_LOB_data[s][self.datahandler.latest_symbol_exchange_LOB_data_time[s]][0]
+                        # rebalance
+                        if now_value<1000:
+                            order = OrderEvent(timestamp=time_now+2*self.order_latency, symbol=s, order_id = self._get_order_id(),
+                                                order_type="MARKET", direction='BUY', quantity=((1000-now_value)/orderbook_info.ask1))
+                        elif now_value>1000:
+                            order = OrderEvent(timestamp=time_now+2*self.order_latency, symbol=s, order_id = self._get_order_id(),
+                                                order_type="MARKET", direction='SELL', quantity=((now_value-1000)/orderbook_info.ask1))

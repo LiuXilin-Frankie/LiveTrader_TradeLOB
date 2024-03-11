@@ -56,4 +56,4 @@ while True:
                     strategy.on_order_fill(event)
                     #sys.exit()
 
-print(portfolio.all_holdings)
+print(portfolio.current_holdings)
