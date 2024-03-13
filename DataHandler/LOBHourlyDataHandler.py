@@ -27,7 +27,7 @@ from DataHandler.MarketDataStructure import Orderbook, Trade
 
 class HistoricLOBHourlyDataHandler(DataHandler):
     """
-    从本地文件中读取历史数据生成 DataHandler, 读取的数据主要为 trade, LOB
+    从本地文件中读取历史数据生成 DataHandler, 读取的数据主要为 LOB
     读取程序兼容 parquet 以及 csv 文件
 
     Read historical data from local files to generate a DataHandler, with the primary data being trade and Limit Order Book (LOB) data. 
@@ -130,7 +130,7 @@ class HistoricLOBHourlyDataHandler(DataHandler):
 
             # 约束存在的列
             # history_data_trade = history_data_trade[['time','price','qty','is_buyer_maker']]
-            history_data_LOB = history_data_LOB[['time','bid1','bidqty1','ask1','askqty1']]
+            history_data_LOB = history_data_LOB[['time','bid1','bid_qty1','ask1','ask_qty1']]
             history_data_LOB = self._process_duplicated_time(history_data_LOB)  #删除重复的时间
 
             # 初始化 latest 和 registered
