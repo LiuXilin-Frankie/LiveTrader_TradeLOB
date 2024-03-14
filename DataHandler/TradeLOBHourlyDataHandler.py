@@ -212,10 +212,12 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
     def _get_new_data(self):
         for s in self.symbol_exchange_list:
             try:
+                self.registered_symbol_exchange_trade_data[s] = {}
                 self.registered_symbol_exchange_trade_data[s][self.backtest_now] = self.__symbol_exchange_trade_data[s][self.backtest_now]
                 self.latest_symbol_exchange_trade_data_time[s] = self.backtest_now
             except: pass
             try:
+                self.registered_symbol_exchange_LOB_data[s] = {}
                 self.registered_symbol_exchange_LOB_data[s][self.backtest_now] = self.__symbol_exchange_LOB_data[s][self.backtest_now]
                 self.latest_symbol_exchange_LOB_data_time[s] = self.backtest_now
             except: pass
