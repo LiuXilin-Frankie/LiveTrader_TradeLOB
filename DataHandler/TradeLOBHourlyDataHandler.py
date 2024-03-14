@@ -128,8 +128,8 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
                     )
 
             # 约束存在的列
-            history_data_trade = history_data_trade[['time','price','qty','is_buyer_maker']]
-            history_data_LOB = history_data_LOB[['time','bid1','bid_qty1','ask1','ask_qty1']]
+            history_data_trade = history_data_trade[['time','price','qty','maker']]
+            history_data_LOB = history_data_LOB[['time','bid1','bid1_qty','ask1','ask1_qty']]
             history_data_LOB = self._process_duplicated_time(history_data_LOB)  #删除重复的时间
 
             # 初始化 latest 和 registered
@@ -188,8 +188,8 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
                     )
 
             # 约束存在的列
-            history_data_trade = history_data_trade[['time','price','qty','is_buyer_maker']]
-            history_data_LOB = history_data_LOB[['time','bid1','bid_qty1','ask1','ask_qty1']]
+            history_data_trade = history_data_trade[['time','price','qty','maker']]
+            history_data_LOB = history_data_LOB[['time','bid1','bid1_qty','ask1','ask1_qty']]
             history_data_LOB = self._process_duplicated_time(history_data_LOB)  #删除重复的时间
             history_data_LOB = history_data_LOB.loc[(history_data_LOB.time>self.hourly_start)&
                                                     (history_data_LOB.time<self.hourly_end),].reset_index(drop=True)
@@ -198,14 +198,14 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
             self.__symbol_exchange_trade_data[s] = {i:[] for i in history_data_trade.time.unique()}
             for i in range(len(history_data_trade.time)):
                 market_event = Trade(symbol=s, price=history_data_trade['price'][i], qty=history_data_trade['qty'][i], 
-                                     is_buyer_maker=history_data_trade['is_buyer_maker'][i], timestamp=history_data_trade['time'][i])
+                                     is_buyer_maker=history_data_trade['maker'][i]=="BUY", timestamp=history_data_trade['time'][i])
                 self.__symbol_exchange_trade_data[s][market_event.timestamp] += [market_event]
             
             # 记录LOB数据 目前很花时间
             self.__symbol_exchange_LOB_data[s] = {i:[] for i in history_data_LOB.time.unique()}
             for i in range(len(history_data_LOB.time)):
-                market_event = Orderbook(symbol=s, bid1=history_data_LOB['bid1'][i], bidqty1=history_data_LOB['bid_qty1'][i], 
-                                         ask1=history_data_LOB['ask1'][i], askqty1=history_data_LOB['ask_qty1'][i], 
+                market_event = Orderbook(symbol=s, bid1=history_data_LOB['bid1'][i], bidqty1=history_data_LOB['bid1_qty'][i], 
+                                         ask1=history_data_LOB['ask1'][i], askqty1=history_data_LOB['ask1_qty'][i], 
                                          timestamp=history_data_LOB['time'][i])
                 self.__symbol_exchange_LOB_data[s][market_event.timestamp] += [market_event]
 
