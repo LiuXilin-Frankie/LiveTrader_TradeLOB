@@ -6,7 +6,7 @@
 import queue
 import time
 
-from DataHandler.CSVDataHandler import CSVDataHandler
+from DataHandler.others.CSVDataHandler import CSVDataHandler
 from Strategy.strategy import RandomStrategy
 from Portfolio.portfolio import NaivePortfolio
 from BarBacktestExecutor import BarBacktestExector
