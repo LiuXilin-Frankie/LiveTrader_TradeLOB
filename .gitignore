@@ -10,7 +10,7 @@ try/
 # 忽略与broker交互的代码
 ib*.py
 *.zip
-try.*
+
 
 
 # Byte-compiled / optimized / DLL files
