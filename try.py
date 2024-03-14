@@ -4,7 +4,7 @@ import os
 import sys
 
 from DataHandler.LOBHourlyDataHandler import HistoricLOBHourlyDataHandler
-from Strategy.strategy import BuyAndHoldStrategy
+from Strategy.BuyAndHoldStrategy import BuyAndHoldStrategy
 from Portfolio.LogPlotPortfolio import LogPlotPortfolio
 from Execution.execution import SimulatedExecutionHandler
 
