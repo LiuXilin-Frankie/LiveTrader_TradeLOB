@@ -194,12 +194,12 @@ class HistoricLOBHourlyDataHandler(DataHandler):
             history_data_LOB = history_data_LOB.loc[(history_data_LOB.time>self.hourly_start)&
                                                     (history_data_LOB.time<self.hourly_end),].reset_index(drop=True)
             
-            # # 记录trade数据 目前很花时间
-            # self.__symbol_exchange_trade_data[s] = {i:[] for i in history_data_trade.time.unique()}
-            # for i in range(len(history_data_trade.time)):
-            #     market_event = Trade(symbol=s, price=history_data_trade['price'][i], qty=history_data_trade['qty'][i], 
-            #                          is_buyer_maker=history_data_trade['is_buyer_maker'][i], timestamp=history_data_trade['time'][i])
-            #     self.__symbol_exchange_trade_data[s][market_event.timestamp] += [market_event]
+            # 记录trade数据 目前很花时间
+            self.__symbol_exchange_trade_data[s] = {i:[] for i in history_data_trade.time.unique()}
+            for i in range(len(history_data_trade.time)):
+                market_event = Trade(symbol=s, price=history_data_trade['price'][i], qty=history_data_trade['qty'][i], 
+                                     is_buyer_maker=history_data_trade['is_buyer_maker'][i], timestamp=history_data_trade['time'][i])
+                self.__symbol_exchange_trade_data[s][market_event.timestamp] += [market_event]
             
             # 记录LOB数据 目前很花时间
             self.__symbol_exchange_LOB_data[s] = {i:[] for i in history_data_LOB.time.unique()}
