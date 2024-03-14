@@ -24,7 +24,7 @@ from object import DataHandler, DataHandlerError
 from DataHandler.MarketDataStructure import Orderbook, Trade
 
 
-class HistoricLOBHourlyDataHandler(DataHandler):
+class HistoricTradeLOBHourlyDataHandler(DataHandler):
     """
     从本地文件中读取历史数据生成 DataHandler, 读取的数据主要为 LOB
     读取程序兼容 parquet 以及 csv 文件

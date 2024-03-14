@@ -18,6 +18,23 @@ pip install -r requirements.txt
 # System FrameWork
 Idea from [quantstart article](https://www.quantstart.com/articles/Event-Driven-Backtesting-with-Python-Part-I/), 以下是该网站对于这一类回测系统基本架构的描述。如果您想了解本回测框架相比于该网站的区别，请看下文‘特性’。
 
+### File Structure
++ _doc: contain some docs
++ data_sample: data_sample for u to run the sys
++ DataHandler: Module to push data
+    + LOBHourlyDataHandler: hourly read and one-by-one push LOB data
+    + TradeLOBHourlyDataHandler: hourly read and one-by-one push Trade & LOB data
+    + MarketDataStructure: DataStructure will used in each DataHandler
+    + others: histroy file, please ignore
++ Execution: Mock exchange execute
+    + excution: please order in the mock exchange orderbook, mock trade
+    + OrderDataStructure: DataStructure will used in each excution
++ Portfolio: used to log holdings and positions
++ Strategy: your strategy here
++ event: base event
++ object: base object
++ performance: used to gerate strategy performance report
+
 ### 特性：
 1. 为了满足跨交易所交易的策略需求，品类命名被写为 "symbol_exchange" 的形式，比如说 "btc_usdt_binance", 所有需要考虑的品类名被存储在 symbol_exchange_list 中
 
