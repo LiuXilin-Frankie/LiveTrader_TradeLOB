@@ -254,7 +254,8 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
     ########## func for request data ##########
     ###########################################
 
-    def get_latest_trades(self, force_now=False) -> Dict[str:Trade]:
+    # def get_latest_trades(self, force_now=False) -> Dict[str:Trade]:
+    def get_latest_trades(self, force_now=False):
         """
         获取所有 symbols 最新的trade数据
         force_now 强制只推送时间等同于回测系统时间的数据
@@ -275,7 +276,8 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
                 outcomes[s] = self.latest_symbol_exchange_trade_data[s][-1]
         return outcomes
     
-    def get_latest_LOBs(self, force_now=False) -> Dict[str:Orderbook]:
+    # def get_latest_LOBs(self, force_now=False) -> Dict[str:Orderbook]:
+    def get_latest_LOBs(self, force_now=False):
         """
         获取所有 symbols 最新的LOB数据
         force_now 强制只推送时间等同于回测系统时间的数据
@@ -297,7 +299,8 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
         return outcomes
     
     
-    def get_latest_prices(self) -> Dict[str:float]:
+    # def get_latest_prices(self) -> Dict[str:float]:
+    def get_latest_prices(self):
         """
         获取最新的价格
         会先寻找成交信息

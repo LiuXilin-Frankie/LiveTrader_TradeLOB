@@ -82,7 +82,7 @@ class LeadLagArbitrageStrategy(Strategy):
         这也就意味着我们的 position_limit 为 1
         """
         # 生成交易记录的list
-        traded_info = self.datahandler.registered_symbol_exchange_trade_data[s][self.datahandler.backtest_now]
+        traded_info = self.datahandler.latest_symbol_exchange_trade_data[s]
         if self.last_trade[s] is not None:
             traded_info = [self.last_trade[s]] + traded_info
         
