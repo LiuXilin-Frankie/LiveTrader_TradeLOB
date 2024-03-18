@@ -54,13 +54,21 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
         print('backtest on: ', self.symbol_exchange_list)
 
         # 为了时间效率我们这里暂时不处理trade数据
+        """
+        关于行情数据可以访问的两个数据结构：
+        以LOB为例, trade 数据同理：
+            - latest_symbol_exchange_LOB_data
+              dict{symbol:List[], symbol:List[],.....}
+            - latest_symbol_exchange_LOB_data_time
+              dict{symbol:int, symbol:int,.....}
+        """
         # trade 数据
         self.__symbol_exchange_trade_data = {}                # 从csv读取的表单
-        self.registered_symbol_exchange_trade_data = {}     # 最新的以及历史的数据
+        self.latest_symbol_exchange_trade_data = {}     # 最新的以及历史的数据
         self.latest_symbol_exchange_trade_data_time = {}    # 更新到的时间表
         # LOB 数据 (最高频的LOB 仅保存bid1&ask1)
         self.__symbol_exchange_LOB_data = {}                  # 从csv读取的表单
-        self.registered_symbol_exchange_LOB_data = {}       # 最新的以及历史的数据
+        self.latest_symbol_exchange_LOB_data = {}       # 最新的以及历史的数据
         self.latest_symbol_exchange_LOB_data_time = {}      # 更新到的时间表
         # 时间相关的指标
         self.start_time = None
@@ -133,8 +141,10 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
             history_data_LOB = self._process_duplicated_time(history_data_LOB)  #删除重复的时间
 
             # 初始化 latest 和 registered
-            self.registered_symbol_exchange_LOB_data[s] = {}
+            self.latest_symbol_exchange_LOB_data[s] = []
             self.latest_symbol_exchange_LOB_data_time[s] = None
+            self.latest_symbol_exchange_trade_data[s] = []
+            self.latest_symbol_exchange_trade_data_time[s] = None
 
             # 集合时间的index
             if comb_time_index is None:
@@ -169,7 +179,6 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
         """
         获取回测的time_index
         """
-        comb_time_index = None
         for s in self.symbol_exchange_list:
             # 读取 csv/parquet 数据
             if self.is_csv:
@@ -189,10 +198,12 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
 
             # 约束存在的列
             history_data_trade = history_data_trade[['time','price','qty','maker']]
+            history_data_trade = history_data_trade.loc[(history_data_trade.time>=self.hourly_start)&
+                                                    (history_data_trade.time<=self.hourly_end),].reset_index(drop=True)
             history_data_LOB = history_data_LOB[['time','bid1','bid1_qty','ask1','ask1_qty']]
             history_data_LOB = self._process_duplicated_time(history_data_LOB)  #删除重复的时间
-            history_data_LOB = history_data_LOB.loc[(history_data_LOB.time>self.hourly_start)&
-                                                    (history_data_LOB.time<self.hourly_end),].reset_index(drop=True)
+            history_data_LOB = history_data_LOB.loc[(history_data_LOB.time>=self.hourly_start)&
+                                                    (history_data_LOB.time<=self.hourly_end),].reset_index(drop=True)
             
             # 记录trade数据 目前很花时间
             self.__symbol_exchange_trade_data[s] = {i:[] for i in history_data_trade.time.unique()}
@@ -212,13 +223,11 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
     def _get_new_data(self):
         for s in self.symbol_exchange_list:
             try:
-                self.registered_symbol_exchange_trade_data[s] = {}
-                self.registered_symbol_exchange_trade_data[s][self.backtest_now] = self.__symbol_exchange_trade_data[s][self.backtest_now]
+                self.latest_symbol_exchange_trade_data[s] = self.__symbol_exchange_trade_data[s][self.backtest_now]
                 self.latest_symbol_exchange_trade_data_time[s] = self.backtest_now
             except: pass
             try:
-                self.registered_symbol_exchange_LOB_data[s] = {}
-                self.registered_symbol_exchange_LOB_data[s][self.backtest_now] = self.__symbol_exchange_LOB_data[s][self.backtest_now]
+                self.latest_symbol_exchange_LOB_data[s] = self.__symbol_exchange_LOB_data[s][self.backtest_now]
                 self.latest_symbol_exchange_LOB_data_time[s] = self.backtest_now
             except: pass
 
@@ -234,40 +243,100 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
                 [self.hourly_start, self.hourly_end] = self.hourly_load_list.__next__()
                 self._load_hourly_data_from_csv_file()
             # 开始推送新的行情数据
-            print('\n===== processing market event in ',self.backtest_now,' =====')
+            # print('\n===== processing market event in ',self.backtest_now,' =====')
             self._get_new_data()
             self.events.put(MarketEvent())
-            print('get new market events and push to queue')
+            # print('get new market events and push to queue')
         except StopIteration:
             self.continue_backtest = False
 
-    def get_latest_trades(self):
+    ###########################################
+    ########## func for request data ##########
+    ###########################################
+
+    def get_latest_trades(self, force_now=False) -> Dict[str:Trade]:
         """
-        获取最新的成交信息
+        获取所有 symbols 最新的trade数据
+        force_now 强制只推送时间等同于回测系统时间的数据
+        如果还没有数据的symbols不推送
+
+        return sample:
+        {'btc_usdt_binance': 
+            {'symbol': 'btc_usdt_binance', 'price': 42612.0, 'qty': 0.00687, 'is_buyer_maker': True, 'timestamp': 1704042025507, 'receive_time': None},
+         'btc_usdt_bybit': 
+            {'symbol': 'btc_usdt_bybit', 'price': 42611.99, 'qty': 0.02789, 'is_buyer_maker': False, 'timestamp': 1704042025312, 'receive_time': None}}
         """
         outcomes = dict()
         for s in self.symbol_exchange_list:
             latest_time = self.latest_symbol_exchange_trade_data_time[s]
             if latest_time is not None:
-                outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1].price
+                if force_now:
+                    if latest_time != self.backtest_now: continue
+                outcomes[s] = self.latest_symbol_exchange_trade_data[s][-1]
         return outcomes
     
-    def get_latest_prices(self):
+    def get_latest_LOBs(self, force_now=False) -> Dict[str:Orderbook]:
+        """
+        获取所有 symbols 最新的LOB数据
+        force_now 强制只推送时间等同于回测系统时间的数据
+        如果还没有数据的symbols不推送
+
+        return sample:
+        {'btc_usdt_binance': 
+            {'symbol': 'btc_usdt_binance', 'bid1': 42611.99, 'bidqty1': 3.13322, 'ask1': 42612.0, 'askqty1': 2.67936, 'timestamp': 1704042025824, 'receive_time': None},
+         'btc_usdt_bybit': 
+            {'symbol': 'btc_usdt_bybit', 'bid1': 42611.99, 'bidqty1': 1.139443, 'ask1': 42612.0, 'askqty1': 0.494114, 'timestamp': 1704042025783, 'receive_time': None}}
+        """
+        outcomes = dict()
+        for s in self.symbol_exchange_list:
+            latest_time = self.latest_symbol_exchange_LOB_data_time[s]
+            if latest_time is not None:
+                if force_now:
+                    if latest_time != self.backtest_now: continue
+                outcomes[s] = self.latest_symbol_exchange_LOB_data[s][-1]
+        return outcomes
+    
+    
+    def get_latest_prices(self) -> Dict[str:float]:
         """
         获取最新的价格
         会先寻找成交信息
         没有的话用LOB信息取代
+        
+        return sample:
+            {'btc_usdt_binance': 42612.0, 'btc_usdt_bybit': 42611.99}
         """
         outcomes = dict()
         try:
-            for s in self.symbol_exchange_list:
-                latest_time = self.latest_symbol_exchange_trade_data_time[s]
-                if latest_time is not None:
-                    outcomes[s] = self.registered_symbol_exchange_trade_data[s][latest_time][-1].price
+            tmp = self.get_latest_trades()
+            for i in tmp.keys():
+                outcomes[i] = tmp[i].price
         except:
-            for s in self.symbol_exchange_list:
-                latest_time = self.latest_symbol_exchange_LOB_data_time[s]
-                if latest_time is not None:
-                    outcomes[s] = (self.registered_symbol_exchange_LOB_data[s][latest_time][-1].bid1 +\
-                          self.registered_symbol_exchange_LOB_data[s][latest_time][-1].ask1)/2
+            tmp = self.get_latest_LOBs()
+            for i in tmp.keys():
+                outcomes[i] = (tmp[i].bid1+tmp[i].ask1)/2
         return outcomes         
+
+    def get_updated_trade_symbols(self) -> List:
+        """
+        trade数据
+        获取哪些symbol发生了更新
+        """
+        outcome = []
+        for s in self.symbol_exchange_list:
+            if s in self.latest_symbol_exchange_trade_data_time:
+                if self.latest_symbol_exchange_trade_data_time[s] == self.backtest_now:
+                    outcome.append(s)
+        return outcome
+    
+    def get_updated_LOB_symbols(self) -> List:
+        """
+        LOB数据
+        获取哪些symbol发生了更新
+        """
+        outcome = []
+        for s in self.symbol_exchange_list:
+            if s in self.latest_symbol_exchange_LOB_data_time:
+                if self.latest_symbol_exchange_LOB_data_time[s] == self.backtest_now:
+                    outcome.append(s)
+        return outcome

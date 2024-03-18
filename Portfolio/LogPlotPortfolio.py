@@ -19,7 +19,7 @@ sys.path.append("..")
 
 from event import FillEvent, OrderEvent
 from object import Portfolio
-from Portfolio.performance import *
+from Portfolio.Performance import *
 
 class LogPlotPortfolio(Portfolio):
     """
