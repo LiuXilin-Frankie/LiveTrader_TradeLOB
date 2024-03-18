@@ -71,6 +71,9 @@ class LogPlotPortfolio(Portfolio):
         self.current_holdings['commission'] = None
         self.current_holdings['net_value'] = 0
 
+    def on_market_event(self,event):
+        self.update_holdings_from_market()
+
     def update_holdings_from_market(self):
         """
         根据 MarketEvent 更新 holdings 信息
@@ -99,6 +102,11 @@ class LogPlotPortfolio(Portfolio):
             if net_value!= self.current_holdings['net_value']:
                 self.current_holdings['net_value'] = net_value
                 self.all_holdings['net_value'][self.datahandler.backtest_now] = net_value
+
+    def on_fill_event(self,event):
+        if event.type == "FILL":
+            if event.fill_flag == 'ALL':
+                self.update_positions_from_fill(event)
 
     def update_positions_from_fill(self, event):
         """

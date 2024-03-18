@@ -102,7 +102,6 @@ class LeadLagArbitrageStrategy(Strategy):
                                    quantity=(10000/IOC_price))
                 self.events.put(order)
 
-
     def on_market_event(self, event):
         """
         Market Event 到达之后需要更新的信息
@@ -118,6 +117,8 @@ class LeadLagArbitrageStrategy(Strategy):
         
         # 检查已经开仓的symbols.
 
+    def on_fill_event(self, event):
+        pass
 
                 
         

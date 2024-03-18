@@ -100,7 +100,7 @@ class FillEvent(Event):
     FillEvent
     """
 
-    def __init__(self, timestamp, symbol, exchange, order_id, direction, quantity, price, is_Maker):
+    def __init__(self, timestamp, symbol, exchange, order_id, direction, quantity, price, is_Maker, fill_flag='ALL'):
         self.type = 'FILL'
         self.timestamp = timestamp     # timestamp of Fill
         self.symbol = symbol
@@ -109,11 +109,12 @@ class FillEvent(Event):
         self.direction = direction     # 'BUY' or 'SELL'
         self.quantity = quantity       # filled quantity
         self.price = price             # average price of filled orders
-        #self.fill_flag = fill_flag     # 'PARTIAL', 'ALL', 'CANCELED'
+        self.fill_flag = fill_flag     # 'PARTIAL', 'ALL', 'CANCELED'
         self.is_Maker = is_Maker       # 是否是 Maker 成交，用于判断手续费
 
-        self.fee = self.get_fee()      # 这里仅是费率，如果要考虑交易量的问题，应该进一步计算commission。这一版暂时忽略
-        self.cal_cash_cost()
+        if self.fill_flag == "ALL":
+            self.fee = self.get_fee()      # 这里仅是费率，如果要考虑交易量的问题，应该进一步计算commission。这一版暂时忽略
+            self.cal_cash_cost()
 
     def get_fee(self):
         """

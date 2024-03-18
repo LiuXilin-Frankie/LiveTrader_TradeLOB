@@ -12,6 +12,7 @@ import queue
 from abc import ABCMeta, abstractmethod
 import sys
 sys.path.append("..")
+import numpy as np
 
 from event import FillEvent, OrderEvent
 from object import ExecutionHandler
@@ -70,6 +71,19 @@ class SimulatedExecutionHandler(ExecutionHandler):
             self.live_orders_on_exchange[order.symbol].append(order)
             # 更新 live_orders_on_exchange_min_time
             self._cal_live_orders_on_exchange_min_time()
+    
+    def on_fill_event(self, event):
+        """
+        接受订单Fill信息
+        成交/取消订单
+        1.从 live_orders_on_exchange 中删除
+        2.重新计算 live_orders_on_exchange_min_time
+        """
+        if event.type == 'FILL':
+            new_orders = [i for i in self.live_orders_on_exchange[event.symbol] if i.order_id != event.order_id]
+            self.live_orders_on_exchange[event.symbol] = new_orders
+            # 更新 live_orders_on_exchange_min_time
+            self._cal_live_orders_on_exchange_min_time()
 
     def on_market_event(self, event):
         """
@@ -95,16 +109,62 @@ class SimulatedExecutionHandler(ExecutionHandler):
             order_tobe_execute = self.live_orders_on_exchange[s][i]
             if order_tobe_execute.timestamp > time_now: continue
 
+            # 市价单
             if order_tobe_execute.order_type == "MARKET":
                 is_traded = self.execute_market_order(order_tobe_execute)
-                if is_traded: 
-                    self.live_orders_on_exchange[s].pop(i)
-                    # 这里调用有点危险 先这样再说吧
-                    self._cal_live_orders_on_exchange_min_time()
-                continue
+                # if is_traded: 
+                #     # !!!这里应该交给 Fill event 来解决
+                #     self.live_orders_on_exchange[s].pop(i)
+                #     self._cal_live_orders_on_exchange_min_time()
+            
+            # IOC订单
+            if order_tobe_execute.order_type == "IOC":
+                is_traded = self.execute_IOC_order(order_tobe_execute)
 
             # if order_tobe_execute
     
+    def execute_IOC_order(self, order:LiveOrder) -> bool:
+        """
+        执行 IOC order,
+        无论如何都会 put FillEvent, 如果可以被成交告知其它模块，如果不能被成交则删除订单
+        暂不支持部分成交
+        return type:
+            True 全部成交
+            False 未成交
+        """
+        # 重复检查
+        if order.timestamp > self.datahandler.backtest_now : return False
+        if order.order_type != "IOC":
+            raise RuntimeError('Not IOC order but use execute_IOC_order func, please check your code')
+        
+        # 获取最新的LOB数据
+        ### 这里可能出现 订单簿的更显时间与回测系统的 backtest_now 不一致的情况。默认订单簿没有发生改变
+        live_LOB = self.datahandler.get_latest_LOBs()[order.symbol]
+        
+        # 检查是否能够成交
+        traded_type = False
+        traded_prc = np.nan
+        
+        if order.direction == 'BUY':
+            if order.price >= live_LOB.ask1:
+                traded_type = True
+                traded_prc = live_LOB.ask1
+        
+        if order.direction == 'SELL':
+            if order.price <= live_LOB.bid1:
+                traded_type = True
+                traded_prc = live_LOB.bid1
+        
+        if not traded_type: fill_flag = "CANCELED"
+        # 向 event_queue put fill event
+        fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
+                               symbol=order.symbol, exchange=order.symbol.split("_")[-1], 
+                               order_id=order.order_id, direction=order.direction, 
+                               quantity=order.quantity, price=traded_prc, 
+                               is_Maker=False, fill_flag = fill_flag)
+        self.events.put(fill_event)
+        return traded_type
+
     def execute_market_order(self, order:LiveOrder) -> bool:
         """
         执行 MKT order, 会直接强制成交所有的交易量（即使在订单簿存在订单量不够的情况下
@@ -120,8 +180,6 @@ class SimulatedExecutionHandler(ExecutionHandler):
         
         # 获取最新的LOB数据
         ### 这里可能出现 订单簿的更显时间与回测系统的 backtest_now 不一致的情况。默认订单簿没有发生改变
-        print(self.datahandler.latest_symbol_exchange_LOB_data_time)
-        print(self.datahandler.registered_symbol_exchange_LOB_data)
         live_LOB = self.datahandler.registered_symbol_exchange_LOB_data[order.symbol][self.datahandler.latest_symbol_exchange_LOB_data_time[order.symbol]][0]
         
         # 生成成交价格
@@ -134,7 +192,7 @@ class SimulatedExecutionHandler(ExecutionHandler):
             traded_prc = live_LOB.bid1
             if order.quantity > live_LOB.bidqty1:
                 raise Warning("mkt order exceed the LOB ask1 size for order_id: "+str(order.order_id))
-            
+         
         # 向 event_queue put fill event
         fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
                                symbol=order.symbol, exchange=order.symbol.split("_")[-1], 
@@ -142,8 +200,6 @@ class SimulatedExecutionHandler(ExecutionHandler):
                                quantity=order.quantity, price=traded_prc, is_Maker=False)
         self.events.put(fill_event)
         return True
-
-
 
     # def execute_order(self, event):
     #     """
