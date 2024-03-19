@@ -22,6 +22,7 @@ class LiveOrder(OrderData):
         self.direction = direction
         self.quantity = quantity
         self.price = price
+        self.help_state = 0
 
 
 

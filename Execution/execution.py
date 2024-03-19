@@ -45,6 +45,17 @@ class SimulatedExecutionHandler(ExecutionHandler):
         self.live_orders_on_exchange = dict( (k,v) for k, v in [(s, []) for s in self.symbol_exchange_list] )
         # 每一个symbol存在的挂单中，最小的生效时间（为了考虑挂单延迟生成的辅助属性
         self.live_orders_on_exchange_min_time = dict( (k,v) for k, v in [(s, None) for s in self.symbol_exchange_list] )
+        
+        # 我们这个虚假交易所是否需要帮助优化 POST_ONLY 挂单
+        self.change_post_only = True
+
+    def cancel_all_orders(self):
+        """
+        取消所有订单
+        暂时不返回 fill event
+        """
+        self.live_orders_on_exchange = dict( (k,v) for k, v in [(s, []) for s in self.symbol_exchange_list] )
+        self.live_orders_on_exchange_min_time = dict( (k,v) for k, v in [(s, None) for s in self.symbol_exchange_list] )
 
     def _cal_live_orders_on_exchange_min_time(self):
         """
@@ -71,6 +82,9 @@ class SimulatedExecutionHandler(ExecutionHandler):
             self.live_orders_on_exchange[order.symbol].append(order)
             # 更新 live_orders_on_exchange_min_time
             self._cal_live_orders_on_exchange_min_time()
+
+            # 调用尝试撮合函数
+            self.on_market_event(event)
     
     def on_fill_event(self, event):
         """
@@ -90,13 +104,12 @@ class SimulatedExecutionHandler(ExecutionHandler):
         市场行情信息发生了更新，我们检查是否有 live_orders_on_exchange 发生撮合
         """
         time_now = self.datahandler.backtest_now
-        if event.type == 'MARKET':
-            for s in self.symbol_exchange_list:
-                # 如果没有订单或者订单的生效时间在之后，我们都不对其进行撮合检查
-                if self.live_orders_on_exchange_min_time[s] is None: continue
-                if self.live_orders_on_exchange_min_time[s] > time_now: continue
-                # 检查撮合
-                self.try_excute_order(s)
+        for s in self.symbol_exchange_list:
+            # 如果没有订单或者订单的生效时间在之后，我们都不对其进行撮合检查
+            if self.live_orders_on_exchange_min_time[s] is None: continue
+            if self.live_orders_on_exchange_min_time[s] > time_now: continue
+            # 检查撮合
+            self.try_excute_order(s)
 
     def try_excute_order(self, s):
         """
@@ -121,8 +134,120 @@ class SimulatedExecutionHandler(ExecutionHandler):
             if order_tobe_execute.order_type == "IOC":
                 is_traded = self.execute_IOC_order(order_tobe_execute)
 
-            # if order_tobe_execute
-    
+            # LIMIT订单
+            if order_tobe_execute.order_type == "LIMIT":
+                is_traded = self.execute_LIMIT_order(order_tobe_execute)
+
+            # POST_ONLY订单
+            if order_tobe_execute.order_type == "POST_ONLY":
+                is_traded = self.execute_POST_ONLY_order(order_tobe_execute)
+
+    def execute_POST_ONLY_order(self, order:LiveOrder) -> bool:
+        """
+        执行 POST_ONLY order,
+
+        传统的 POST_ONLY 订单应该是如果不能做市，交易所帮你取消
+        这里设置了一个 self.change_post_only 如果为True会自动帮你改到合适的价格
+        """
+        # 重复检查
+        if order.timestamp > self.datahandler.backtest_now : return False
+        if order.order_type != "POST_ONLY":
+            raise RuntimeError('Not POST_ONLY order but use execute_POST_ONLY_order func, please check your code')
+        
+        # 获取最新的LOB数据
+        ### 这里可能出现 订单簿的更显时间与回测系统的 backtest_now 不一致的情况。默认订单簿没有发生改变
+        live_LOB = self.datahandler.get_latest_LOBs()[order.symbol]
+
+        # 检查是否能够成交
+        traded_type = False
+        traded_prc = np.nan
+        
+        if order.direction == 'BUY':
+            if order.price >= live_LOB.ask1:
+                traded_type = True
+                traded_prc = live_LOB.ask1
+                # print(order,'\n',live_LOB,'\n',traded_prc)
+        
+        if order.direction == 'SELL':
+            if order.price <= live_LOB.bid1:
+                traded_type = True
+                traded_prc = live_LOB.bid1
+                # print(order,'\n',live_LOB,'\n',traded_prc)
+        
+        # 检查对于一个限价订单挂过来，是不是会立刻作为 Taker 成交
+        # 本来这个功能可以在 on_order_event 中实现，但是1.需要考虑订单的挂单延迟，2.一开始没有提前做好规划
+        if order.help_state==0:
+            if traded_type:
+                if order.direction == 'BUY':
+                    order.price = live_LOB.bid1
+                if order.direction == 'SELL':
+                    order.price = live_LOB.ask1
+                traded_type = False
+        if order.help_state==1:
+            # sys.exit()
+            is_Maker = True
+            traded_prc = order.price
+        order.help_state = 1
+
+        if traded_type:
+            # 向 event_queue put fill event
+            fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
+                                symbol=order.symbol, exchange=order.symbol.split("_")[-1], 
+                                order_id=order.order_id, direction=order.direction, 
+                                quantity=order.quantity, price=traded_prc, 
+                                is_Maker=is_Maker, fill_flag = 'ALL')
+            self.events.put(fill_event)
+        return traded_type
+
+    def execute_LIMIT_order(self, order:LiveOrder) -> bool:
+        """
+        执行 LIMIT order,
+        """
+        # 重复检查
+        if order.timestamp > self.datahandler.backtest_now : return False
+        if order.order_type != "LIMIT":
+            raise RuntimeError('Not LIMIT order but use execute_LIMIT_order func, please check your code')
+        
+        # 获取最新的LOB数据
+        ### 这里可能出现 订单簿的更显时间与回测系统的 backtest_now 不一致的情况。默认订单簿没有发生改变
+        live_LOB = self.datahandler.get_latest_LOBs()[order.symbol]
+
+        # 检查是否能够成交
+        traded_type = False
+        traded_prc = np.nan
+        
+        if order.direction == 'BUY':
+            if order.price >= live_LOB.ask1:
+                traded_type = True
+                traded_prc = live_LOB.ask1
+                # print(order,'\n',live_LOB,'\n',traded_prc)
+        
+        if order.direction == 'SELL':
+            if order.price <= live_LOB.bid1:
+                traded_type = True
+                traded_prc = live_LOB.bid1
+                # print(order,'\n',live_LOB,'\n',traded_prc)
+        
+        # 检查对于一个限价订单挂过来，是不是会立刻作为 Taker 成交
+        # 本来这个功能可以在 on_order_event 中实现，但是1.需要考虑订单的挂单延迟，2.一开始没有提前做好规划
+        if order.help_state==0:
+            is_Maker = False
+        if order.help_state==1:
+            # sys.exit()
+            is_Maker = True
+            traded_prc = order.price
+        order.help_state = 1
+
+        if traded_type:
+            # 向 event_queue put fill event
+            fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
+                                symbol=order.symbol, exchange=order.symbol.split("_")[-1], 
+                                order_id=order.order_id, direction=order.direction, 
+                                quantity=order.quantity, price=traded_prc, 
+                                is_Maker=is_Maker, fill_flag = 'ALL')
+            self.events.put(fill_event)
+        return traded_type
+
     def execute_IOC_order(self, order:LiveOrder) -> bool:
         """
         执行 IOC order,
@@ -144,18 +269,22 @@ class SimulatedExecutionHandler(ExecutionHandler):
         # 检查是否能够成交
         traded_type = False
         traded_prc = np.nan
+        fill_flag = "CANCELED"
         
         if order.direction == 'BUY':
             if order.price >= live_LOB.ask1:
                 traded_type = True
                 traded_prc = live_LOB.ask1
+                fill_flag = "ALL"
+                # print(order,'\n',live_LOB,'\n',traded_prc)
         
         if order.direction == 'SELL':
             if order.price <= live_LOB.bid1:
                 traded_type = True
                 traded_prc = live_LOB.bid1
+                fill_flag = "ALL"
+                # print(order,'\n',live_LOB,'\n',traded_prc)
         
-        if not traded_type: fill_flag = "CANCELED"
         # 向 event_queue put fill event
         fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
                                symbol=order.symbol, exchange=order.symbol.split("_")[-1], 
@@ -180,18 +309,14 @@ class SimulatedExecutionHandler(ExecutionHandler):
         
         # 获取最新的LOB数据
         ### 这里可能出现 订单簿的更显时间与回测系统的 backtest_now 不一致的情况。默认订单簿没有发生改变
-        live_LOB = self.datahandler.registered_symbol_exchange_LOB_data[order.symbol][self.datahandler.latest_symbol_exchange_LOB_data_time[order.symbol]][0]
-        
+        live_LOB = self.datahandler.get_latest_LOBs()[order.symbol]
+
         # 生成成交价格
         ### 系统忽略交易量这个概念，如果订单下单量超过订单簿的量会生成警告
         if order.direction == 'BUY':
             traded_prc = live_LOB.ask1
-            if order.quantity > live_LOB.askqty1:
-                raise Warning("mkt order exceed the LOB ask1 size for order_id: "+str(order.order_id))
         if order.direction == 'SELL':
             traded_prc = live_LOB.bid1
-            if order.quantity > live_LOB.bidqty1:
-                raise Warning("mkt order exceed the LOB ask1 size for order_id: "+str(order.order_id))
          
         # 向 event_queue put fill event
         fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
@@ -201,20 +326,3 @@ class SimulatedExecutionHandler(ExecutionHandler):
         self.events.put(fill_event)
         return True
 
-    # def execute_order(self, event):
-    #     """
-    #     需要后续添加:
-    #         1. latency
-    #         2. different fees depends on exchange
-    #         3. 区分 maker & taker
-
-    #     Parameters:
-    #     event - Contains an Event object with order information.
-    #     """
-    #     if event.type == 'ORDER':
-    #         # 这里直接假设成交
-    #         # fill_cost 被设定为 None, 后续有更加严格的需求可以设定为其它值
-    #         # ARCA 是简单的交易所占位符
-    #         fill_event = FillEvent(datetime.datetime.utcnow(), event.symbol,
-    #                                'ARCA', event.quantity, event.direction, None)
-    #         self.events.put(fill_event)

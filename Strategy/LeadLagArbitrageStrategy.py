@@ -12,7 +12,7 @@ sys.path.append("..")
 
 from abc import ABCMeta, abstractmethod
 
-from event import OrderEvent
+from event import OrderEvent, FillEvent
 from object import Strategy
 from Strategy.strategy import StrategyData, Strategy_Info
 
@@ -24,7 +24,7 @@ class LeadLagArbitrageStrategy(Strategy):
     """
 
     def __init__(self, events, datahandler, portfolio, executor, order_latency=50, 
-                 k1=0.5 *1e-4, k2=1*1e-4, k3=1.5*1e-4, order_live_time = 20*1000):
+                 k1=0.5*1e-4, k2=1*1e-4, k3=1.5*1e-4, order_live_time = 10*1000, dynamic_stop_hedge = 5*1000):
         """
         Initialises the buy and hold strategy.
 
@@ -45,12 +45,18 @@ class LeadLagArbitrageStrategy(Strategy):
         self.k2 = k2
         self.k3 = k3
         self.order_live_time = order_live_time
+        self.dynamic_stop_hedge = dynamic_stop_hedge
         
         # arguments used in this strategy
         # Store useful infomation for order generate and stop loss
         self._gen_pair_list()
-        self.signal_time = dict( (k,v) for k, v in [(s, None) for s in self.symbol_exchange_list] )
+        # self.signal_time = dict( (k,v) for k, v in [(s, None) for s in self.symbol_exchange_list] )
         self.last_trade = dict( (k,v) for k, v in [(s, None) for s in self.symbol_exchange_list] )
+        
+        # 记录历史开仓数据
+        self.strategy_history = []
+        # 记录目前交易的详情
+        self.trade_state = {'leader_t':None}
 
     def _gen_pair_list(self):
         self.pair_list = {self.symbol_exchange_list[0]:self.symbol_exchange_list[1],
@@ -109,16 +115,127 @@ class LeadLagArbitrageStrategy(Strategy):
         2. 更新数据
         3. 检查订单/存在的开仓是否需要开始平仓操作
         """
+        # 计算信号
         updated_trade_symbols = self.datahandler.get_updated_trade_symbols()
         for s in updated_trade_symbols:
-            if self.signal_time[s] is None:
+            if self.trade_state['leader_t'] is None:
                 self.calculate_signals(s)
             self.update_last_trade_s(s)
-        
-        # 检查已经开仓的symbols.
+
+        # 检查是否仓位暴露过久需要强行平仓
+        # 调用活跃订单监控函数
+        if self.trade_state['leader_t'] is not None:
+            self.monitor_live_order()
+
+
+    def monitor_live_order(self):
+        """
+        监控活跃的订单
+        比如说超过一段时间我们要强行平仓等等
+        """
+        if self.datahandler.backtest_now > self.trade_state['stop_time']:
+            print('===== start force hedge =====')     
+            # 取消上一次订单
+            fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
+                                    symbol=self.trade_state['hedge_symbol'],
+                                    exchange=self.trade_state['hedge_symbol'].split("_")[-1], 
+                                    order_id=self.trade_state['hedge_order_id'],
+                                    direction=self.trade_state['hedge_direction'], 
+                                    quantity=self.trade_state['hedge_qty'], 
+                                    price=self.trade_state['hedge_price'], 
+                                    is_Maker=False,
+                                    fill_flag = 'CANCELED')
+            self.events.put(fill_event)
+
+            new_order_type = 'MARKET'
+            new_order_price = np.nan
+            # 策略额外部分，动态平仓尝试
+            if self.dynamic_stop_hedge:
+                if self.trade_state['has_start_force'] ==0:
+                    self.trade_state['stop_time'] += self.dynamic_stop_hedge
+                    self.trade_state['has_start_force'] = 1
+                    new_order_type = 'LIMIT'
+                    live_LOB = self.datahandler.get_latest_LOBs()[self.trade_state['hedge_symbol']]
+                    if self.trade_state['hedge_direction'] =="BUY":
+                        new_order_price = live_LOB.bid1
+                    if self.trade_state['hedge_direction'] =="SELL":
+                        new_order_price = live_LOB.ask1
+
+            order = OrderEvent(timestamp= self.datahandler.backtest_now, 
+                                symbol= self.trade_state['hedge_symbol'], 
+                                order_id = self._get_order_id(),
+                                order_type= new_order_type, 
+                                direction=self.trade_state['hedge_direction'],
+                                price = new_order_price,
+                                quantity=self.trade_state['hedge_qty'])
+            self.trade_state['hedge_order_id'] = order.order_id
+            self.events.put(order)
 
     def on_fill_event(self, event):
-        pass
+        """
+        对 fill event 作出反应
+        """
+        # 只对全部成交作出反应
+        if event.type != 'FILL': return
+        if event.fill_flag != 'ALL': return
+
+        # 如果是信号的开仓订单
+        if self.trade_state['leader_t'] is None:
+            self.trade_state['leader_t'] = event.timestamp
+            self.trade_state['leader_price'] = event.price
+            self.trade_state['leader_traded_is_Maker'] = event.is_Maker
+            self.trade_state['leader_direction'] = event.direction
+            self.trade_state['leader_order_id'] = event.order_id
+            self.trade_state['leader_order_qty'] = event.quantity
+            self.trade_state['leader_symbol'] = event.symbol
+            self.trade_state['has_start_force'] = 0
+            self.trade_state['leader_is_Maker'] = event.is_Maker
+            self.trade_state['leader_fee'] = event.fee
+            self.executor.cancel_all_orders()
+
+            hedge_price = event.price*(1+self.k3)
+            arrive_time = event.timestamp+ 2*self.order_latency
+            stop_time = arrive_time + self.order_live_time
+            hedge_symbol = self.pair_list[event.symbol]
+            if event.direction =='BUY':
+                hedge_direction = "SELL"
+            if event.direction =='SELL':
+                hedge_direction = "BUY"
+
+            order = OrderEvent(timestamp = arrive_time, 
+                                symbol = hedge_symbol, 
+                                order_id = self._get_order_id(),
+                                order_type = "POST_ONLY", 
+                                direction = hedge_direction,
+                                price = hedge_price,
+                                quantity = event.quantity)
+            self.events.put(order)
+            print(order)
+            self.trade_state['stop_time'] = stop_time
+            self.trade_state['hedge_order_id'] = order.order_id
+            self.trade_state['hedge_symbol'] = order.symbol
+            self.trade_state['hedge_direction'] = order.direction
+            self.trade_state['hedge_qty'] = order.quantity
+            self.trade_state['hedge_price'] = order.price
+            return
+        
+        # 说明是在确认之前开仓的收益
+        # 我们完成对一笔交易的记录
+        elif self.trade_state['leader_t'] is not None:
+            self.trade_state['hedge_t'] = event.timestamp
+            self.trade_state['hedge_price'] = event.price
+            self.trade_state['hedge_traded_is_Maker'] = event.is_Maker
+            self.trade_state['hedge_order_id'] = event.order_id
+            self.trade_state['hedge_fee'] = event.fee
+
+            ## 一次交易完成，开始初始化
+            ## 初始化之后我们可以重新计算信号并且开仓
+            self.strategy_history.append(self.trade_state)
+            self.trade_state = {'leader_t':None}
+            self.executor.cancel_all_orders()
+            # sys.exit()
+            
+
 
                 
         

@@ -112,9 +112,11 @@ class FillEvent(Event):
         self.fill_flag = fill_flag     # 'PARTIAL', 'ALL', 'CANCELED'
         self.is_Maker = is_Maker       # 是否是 Maker 成交，用于判断手续费
 
-        if self.fill_flag == "ALL":
+        if fill_flag=='ALL':
             self.fee = self.get_fee()      # 这里仅是费率，如果要考虑交易量的问题，应该进一步计算commission。这一版暂时忽略
             self.cal_cash_cost()
+            print('order filled')
+            print(self.__dict__.__repr__())
 
     def get_fee(self):
         """
@@ -128,6 +130,10 @@ class FillEvent(Event):
         if self.exchange.lower()=='binance':
             if self.is_Maker: return -0.00006
             else: return 0.000173
+        # bybit 暂时先用okex的来
+        if self.exchange.lower()=='bybit':
+            if self.is_Maker: return -0.00005
+            else: return 0.00015
 
     def cal_cash_cost(self):
         if self.direction=="BUY":
