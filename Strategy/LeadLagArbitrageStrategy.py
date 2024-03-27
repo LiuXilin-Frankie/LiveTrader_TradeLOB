@@ -24,7 +24,12 @@ class LeadLagArbitrageStrategy(Strategy):
     """
 
     def __init__(self, events, datahandler, portfolio, executor, order_latency=50, 
-                 k1=0.5*1e-4, k2=1*1e-4, k3=1.5*1e-4, order_live_time = 10*1000, dynamic_stop_hedge = 5*1000):
+                 k1=0.5*1e-4, 
+                 k2=1*1e-4, 
+                 k3=1.5*1e-4, 
+                 order_live_time = 10*1000, 
+                 dynamic_stop_hedge = 5*1000,
+                 stop_loss_threshold = 3*1e-4):
         """
         Initialises the buy and hold strategy.
 
@@ -46,6 +51,7 @@ class LeadLagArbitrageStrategy(Strategy):
         self.k3 = k3
         self.order_live_time = order_live_time
         self.dynamic_stop_hedge = dynamic_stop_hedge
+        self.stop_loss_threshold = stop_loss_threshold
         
         # arguments used in this strategy
         # Store useful infomation for order generate and stop loss
@@ -125,8 +131,17 @@ class LeadLagArbitrageStrategy(Strategy):
         # 检查是否仓位暴露过久需要强行平仓
         # 调用活跃订单监控函数
         if self.trade_state['leader_t'] is not None:
+            self.monitor_stop_loss()
             self.monitor_live_order()
 
+    def monitor_stop_loss(self):
+        price = self.datahandler.get_latest_prices()[self.trade_state['hedge_symbol']]
+        if self.trade_state['leader_direction'] == "BUY":
+            if (price - self.trade_state['leader_price'])/self.trade_state['leader_price'] < - self.stop_loss_threshold:
+                self.trade_state['stop_time'] = self.datahandler.backtest_now -1
+        if self.trade_state['leader_direction'] == "SELL":
+            if (price - self.trade_state['leader_price'])/self.trade_state['leader_price'] > self.stop_loss_threshold:
+                self.trade_state['stop_time'] = self.datahandler.backtest_now -1
 
     def monitor_live_order(self):
         """
@@ -134,7 +149,7 @@ class LeadLagArbitrageStrategy(Strategy):
         比如说超过一段时间我们要强行平仓等等
         """
         if self.datahandler.backtest_now > self.trade_state['stop_time']:
-            print('===== start force hedge =====')     
+            # print('===== start force hedge =====')     
             # 取消上一次订单
             fill_event = FillEvent(timestamp=self.datahandler.backtest_now, 
                                     symbol=self.trade_state['hedge_symbol'],
@@ -210,7 +225,7 @@ class LeadLagArbitrageStrategy(Strategy):
                                 price = hedge_price,
                                 quantity = event.quantity)
             self.events.put(order)
-            print(order)
+            # print(order)
             self.trade_state['stop_time'] = stop_time
             self.trade_state['hedge_order_id'] = order.order_id
             self.trade_state['hedge_symbol'] = order.symbol

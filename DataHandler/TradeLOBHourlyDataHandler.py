@@ -239,7 +239,7 @@ class HistoricTradeLOBHourlyDataHandler(DataHandler):
             self.backtest_now = self.comb_time_index_iter.__next__()
             # 检查是否需要load新的历史数据
             if self.backtest_now > self.hourly_end:
-                print('\n===== reload data from new hour =====')
+                # print('\n===== reload data from new hour =====')
                 [self.hourly_start, self.hourly_end] = self.hourly_load_list.__next__()
                 self._load_hourly_data_from_csv_file()
             # 开始推送新的行情数据
